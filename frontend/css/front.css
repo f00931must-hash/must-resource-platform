@@ -1,0 +1,16 @@
+body{background:linear-gradient(180deg,#fff0f7 0,#fff8f5 260px)}
+.front-wrap{max-width:1040px;margin:auto;padding:28px 18px 60px}
+.hero{background:linear-gradient(135deg,#ff5ca8,#ff9ecb);color:white;border-radius:30px;padding:32px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
+.hero h1{margin:8px 0 6px;font-size:36px}.hero p{margin:0;opacity:.94}
+.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:800;opacity:.82}
+.admin-entry{color:white;text-decoration:none;border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:10px 16px;font-weight:900}
+.module-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:18px 0}
+.module{border:0;background:white;border-radius:18px;padding:14px;font-weight:900;box-shadow:0 8px 24px rgba(0,0,0,.05);cursor:pointer}.module.active{background:var(--pink);color:white}
+.toolbar{display:grid;grid-template-columns:1fr 180px;gap:12px;background:rgba(255,255,255,.9);border-radius:20px;padding:14px;margin-bottom:18px;box-shadow:var(--shadow)}
+.post-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.post-card{background:white;border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);border:1px solid var(--line);border-top:7px solid var(--pink);overflow:hidden}
+.post-card.公告{border-top-color:#76b7ff}.post-card.活動{border-top-color:#ff8d8d}.post-card.修課通知{border-top-color:#f6d645}.post-card.獎助學金{border-top-color:#111}.post-card.其他{border-top-color:#a78bfa}
+.thumb{width:100%;height:180px;object-fit:cover;border-radius:16px;border:1px solid var(--line);margin:10px 0}.post-card h3{margin:10px 0;font-size:20px;line-height:1.45}
+.preview{color:var(--muted);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}.meta{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin-top:16px;padding-top:14px;color:#999}.open-btn{color:var(--pink);font-weight:900;cursor:pointer;white-space:nowrap}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:50;padding:20px}.modal-card{background:white;max-width:780px;max-height:88vh;overflow:auto;margin:34px auto;border-radius:26px;padding:28px;position:relative}.modal-close{position:sticky;top:0;float:right;border:0;background:#f4f4f4;border-radius:999px;width:36px;height:36px;font-size:24px;cursor:pointer}
+.modal-img{width:100%;border-radius:18px;border:1px solid var(--line);margin:12px 0}.content{line-height:1.95;white-space:pre-line}.file{display:flex;align-items:center;gap:8px;color:var(--pink);text-decoration:none;font-weight:900;margin:10px 0;padding:12px;border:1px solid var(--pink-soft);border-radius:14px;background:#fffafd}
+@media(max-width:900px){.post-grid{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}.module-tabs{grid-template-columns:repeat(2,1fr)}.hero{display:block}.admin-entry{display:inline-block;margin-top:14px}}
