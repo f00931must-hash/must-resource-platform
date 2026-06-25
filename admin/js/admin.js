@@ -8,12 +8,40 @@ const provider = new GoogleAuthProvider();
 let announcements = [];
 let adminKeyword = "";
 
-$("loginBtn").onclick = () => signInWithPopup(auth, provider);
+$("loginBtn").onclick = async () => {
+  try {
+    $("loginBtn").disabled = true;
+    $("loginBtn").textContent = "登入中...";
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    console.error(err);
+    alert(
+      "Google 登入失敗。\n\n" +
+      "常見原因：\n" +
+      "1. Firebase Authentication 尚未啟用 Google 登入。\n" +
+      "2. Authorized domains 尚未加入 f00931must-hash.github.io。\n" +
+      "3. 瀏覽器封鎖彈出視窗。\n\n" +
+      "錯誤訊息：" + (err.message || err.code)
+    );
+  } finally {
+    $("loginBtn").disabled = false;
+    $("loginBtn").textContent = "使用 Google 登入";
+  }
+};
+
 $("logoutBtn").onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, user=>{
-  if(!user){ $("loginView").classList.remove("hidden"); $("appView").classList.add("hidden"); return; }
-  if(!allowedAdmins.includes(user.email)){ alert("這個帳號沒有後台權限：" + user.email); signOut(auth); return; }
+  if(!user){
+    $("loginView").classList.remove("hidden");
+    $("appView").classList.add("hidden");
+    return;
+  }
+  if(!allowedAdmins.includes(user.email)){
+    alert("這個帳號沒有後台權限：" + user.email + "\n\n請確認 shared/js/firebase-config.js 的 allowedAdmins 是否有加入此 Email。");
+    signOut(auth);
+    return;
+  }
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
   $("userInfo").textContent = user.email;
@@ -27,6 +55,9 @@ function listenPosts(){
   unsubscribe = onSnapshot(query(collection(db, "announcements"), orderBy("date","desc")), snapshot=>{
     announcements = snapshot.docs.map(doc=>({id:doc.id, ...doc.data()}));
     updateStats(); renderList(); renderRecent(); renderLibrary();
+  }, err=>{
+    console.error(err);
+    alert("讀取公告失敗，請檢查 Firestore 規則。\n\n" + err.message);
   });
 }
 
@@ -64,10 +95,16 @@ $("postForm").onsubmit = async e=>{
 
   const data = {title, content, date, category:$("category").value, published:$("published").checked, pinned:$("pinned").checked, images, files, updatedAt:serverTimestamp()};
   const editId = $("editId").value;
-  if(editId) await updateDoc(doc(db,"announcements",editId), data);
-  else { data.createdAt = serverTimestamp(); await addDoc(collection(db,"announcements"), data); }
-  alert("已儲存");
-  resetForm();
+
+  try {
+    if(editId) await updateDoc(doc(db,"announcements",editId), data);
+    else { data.createdAt = serverTimestamp(); await addDoc(collection(db,"announcements"), data); }
+    alert("已儲存");
+    resetForm();
+  } catch (err) {
+    console.error(err);
+    alert("儲存失敗，請檢查 Firestore 規則或登入權限。\n\n" + err.message);
+  }
 };
 
 function renderList(){
@@ -84,7 +121,12 @@ function cardHtml(a){
 }
 function bindCardButtons(){
   document.querySelectorAll("[data-edit]").forEach(btn=>btn.onclick=()=>editPost(btn.dataset.edit));
-  document.querySelectorAll("[data-delete]").forEach(btn=>btn.onclick=async()=>{ if(confirm("確定刪除這筆內容？")) await deleteDoc(doc(db,"announcements",btn.dataset.delete)); });
+  document.querySelectorAll("[data-delete]").forEach(btn=>btn.onclick=async()=>{
+    if(confirm("確定刪除這筆內容？")) {
+      try { await deleteDoc(doc(db,"announcements",btn.dataset.delete)); }
+      catch(err){ alert("刪除失敗：\n" + err.message); }
+    }
+  });
 }
 function renderLibrary(){
   const files = announcements.flatMap(a=>(a.files||[]).map(f=>({...f, postTitle:a.title, date:a.date})));
