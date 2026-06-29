@@ -10,3 +10,9 @@ export const firebaseConfig = {
 export const allowedAdmins = [
   "master004400@gmail.com"
 ];
+
+export const githubConfig = {
+  owner: "f00931must-hash",
+  repo: "must-resource-platform",
+  branch: "main"
+};

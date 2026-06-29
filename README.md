@@ -1,16 +1,15 @@
-# MUST Resource Platform v2.0
+# MUST Resource Platform v3.0
 
-v2.0 重點：
-- 改成 GitHub Pages 可用的 Firebase CDN module 架構
-- 修正 Google 登入
-- 前台公告平台
-- 後台公告管理
-- Firestore 新增 / 修改 / 刪除公告
-- 發布、草稿、置頂、分類、搜尋
-- 不使用 Firebase Storage
+資源教室公告管理平台。
 
-前台：
-https://f00931must-hash.github.io/must-resource-platform/
+## v3.0 新增
+- 後台可拖曳圖片
+- 後台可拖曳 PDF / Word / Excel / PPT / ZIP
+- 可直接貼圖片或附件網址
+- 可設定 GitHub Token
+- 檔案會上傳到 GitHub Repository 的 `frontend/assets/uploads/`
+- 公告資料仍存 Firestore
+- 不使用 Firebase Storage，不需要升級 Blaze
 
-後台：
-https://f00931must-hash.github.io/must-resource-platform/admin/
+## 重要提醒
+GitHub Token 是免費的，但它等於鑰匙。請只建立 Fine-grained token，並只給這個 repo 的 Contents Read and write 權限。

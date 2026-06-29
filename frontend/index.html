@@ -1,7 +1,39 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>資源教室公告平台</title><link rel="stylesheet" href="../shared/css/theme.css"><link rel="stylesheet" href="./css/front.css"></head>
-<body><main class="front-wrap"><section class="hero"><div><div class="eyebrow">MUST Resource Platform</div><h1>📢 資源教室公告平台</h1><p>公告、活動、修課通知、獎助學金與公開附件都放在這裡。</p></div><a class="admin-entry" href="../admin/">管理後台</a></section>
-<section class="module-tabs"><button class="module active" data-category="全部">全部</button><button class="module" data-category="公告">📢 公告</button><button class="module" data-category="活動">🎉 活動</button><button class="module" data-category="修課通知">📚 修課通知</button><button class="module" data-category="獎助學金">🎓 獎助學金</button><button class="module" data-category="其他">📁 其他</button></section>
-<section class="toolbar"><input id="searchInput" class="search" placeholder="搜尋公告標題或內容..."><select id="sortSelect" class="select"><option value="new">最新發布</option><option value="old">最舊發布</option></select></section>
-<section id="announcementList" class="post-grid"><div class="empty">公告載入中...</div></section></main>
-<div id="modal" class="modal" onclick="closeByBg(event)"><article class="modal-card"><button class="modal-close" onclick="closeModal()">×</button><div id="modalContent"></div></article></div>
-<script type="module" src="./js/front.js"></script></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>資源教室公告平台</title>
+<link rel="stylesheet" href="../shared/css/theme.css">
+<link rel="stylesheet" href="./css/front.css">
+</head>
+<body>
+<main class="front-wrap">
+<section class="hero">
+  <div>
+    <div class="eyebrow">MUST Resource Platform</div>
+    <h1>📢 資源教室公告平台</h1>
+    <p>公告、活動、修課通知、獎助學金與公開附件都放在這裡。</p>
+  </div>
+  <a class="admin-entry" href="../admin/">管理後台</a>
+</section>
+<section class="module-tabs">
+  <button class="module active" data-category="全部">全部</button>
+  <button class="module" data-category="公告">📢 公告</button>
+  <button class="module" data-category="活動">🎉 活動</button>
+  <button class="module" data-category="修課通知">📚 修課通知</button>
+  <button class="module" data-category="獎助學金">🎓 獎助學金</button>
+  <button class="module" data-category="其他">📁 其他</button>
+</section>
+<section class="toolbar">
+  <input id="searchInput" class="search" placeholder="搜尋公告標題或內容...">
+  <select id="sortSelect" class="select"><option value="new">最新發布</option><option value="old">最舊發布</option></select>
+</section>
+<section id="announcementList" class="post-grid"><div class="empty">公告載入中...</div></section>
+</main>
+<div id="modal" class="modal" onclick="closeByBg(event)">
+  <article class="modal-card"><button class="modal-close" onclick="closeModal()">×</button><div id="modalContent"></div></article>
+</div>
+<script type="module" src="./js/front.js"></script>
+</body>
+</html>
