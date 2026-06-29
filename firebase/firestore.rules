@@ -1,10 +1,45 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isSuperAdmin() {
+      return signedIn() && request.auth.token.email in [
+        "master004400@gmail.com"
+      ];
+    }
+
+    function adminDocExists() {
+      return exists(/databases/$(database)/documents/settings/admins);
+    }
+
+    function isListedAdmin() {
+      return signedIn()
+        && adminDocExists()
+        && request.auth.token.email in get(/databases/$(database)/documents/settings/admins).data.emails;
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() || isListedAdmin();
+    }
+
     match /announcements/{docId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null
-        && request.auth.token.email in ["master004400@gmail.com"];
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /settings/admins {
+      allow read: if isAdmin();
+
+      // 最高管理員可建立名單；已在名單內的老師也可讀取與維護名單。
+      allow create, update: if isAdmin();
+
+      // 避免誤刪整份管理員名單。
+      allow delete: if false;
     }
   }
 }

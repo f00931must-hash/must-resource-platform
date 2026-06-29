@@ -1,11 +1,19 @@
-# MUST Resource Platform v4.0.1
+# MUST Resource Platform v4.1
 
-這版修正 v4.0 的兩個問題：
-- AI 按鈕無反應
-- 附件中心排版錯亂
+資源教室公告管理平台。
 
-## AI 使用方式
-沒有 OpenAI API Key 也可以用。點 AI 按鈕後會出現提示詞，可複製到 ChatGPT 使用。
+## v4.1 新功能
+- 多位老師管理員
+- 後台「系統設定」可新增 / 移除老師 Email
+- 管理員名單存放於 Firestore：`settings/admins`
+- Firestore Rules 改為讀取管理員名單判斷權限
+- 保留 v4.0 AI 公告助手、圖片/附件拖曳、LINE 版本、公告模板
 
-## Token
-GitHub Token 不用重新貼。
+## 重要
+更新 v4.1 後，請同步更新 Firebase Firestore Rules，使用 `firebase/firestore.rules` 裡面的規則。
+
+## 第一位最高管理員
+預設最高管理員：
+master004400@gmail.com
+
+這個帳號永遠保留管理權限，用來新增其他老師。

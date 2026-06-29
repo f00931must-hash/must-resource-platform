@@ -1,7 +1,7 @@
 import { db, auth } from "../../shared/js/firebase-app.js";
 import { allowedAdmins, githubConfig } from "../../shared/js/firebase-config.js";
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const $ = (id) => document.getElementById(id);
 const provider = new GoogleAuthProvider();
@@ -10,6 +10,8 @@ let announcements = [];
 let adminKeyword = "";
 let uploadedImages = [];
 let uploadedFiles = [];
+let currentUserEmail = "";
+let adminEmails = [];
 
 const templates = {
   activity: { category: "活動", content: "📢【活動通知】\n\n活動名稱：\n活動日期：\n活動地點：\n參加對象：\n報名方式：\n注意事項：\n聯絡窗口：" },
@@ -33,7 +35,123 @@ function bindIfExists(id, eventName, handler) {
 
 bindIfExists("loginBtn", "onclick", async () => {
   try {
-    $("loginBtn").disabled = true;
+
+const superAdmins = allowedAdmins || [];
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+async function loadAdminEmails() {
+  try {
+    const ref = doc(db, "settings", "admins");
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      const list = snap.data().emails || [];
+      adminEmails = [...new Set([...superAdmins, ...list].map(normalizeEmail).filter(Boolean))];
+    } else {
+      adminEmails = [...new Set(superAdmins.map(normalizeEmail))];
+
+      // 最高管理員第一次登入時，自動建立管理員名單。
+      if (superAdmins.map(normalizeEmail).includes(normalizeEmail(currentUserEmail))) {
+        await setDoc(ref, {
+          emails: adminEmails,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
+    }
+
+    renderAdminEmailList();
+    return adminEmails;
+  } catch (e) {
+    console.warn("管理員名單讀取失敗，改用預設最高管理員。", e);
+    adminEmails = [...new Set(superAdmins.map(normalizeEmail))];
+    renderAdminEmailList();
+    return adminEmails;
+  }
+}
+
+function isCurrentAdmin() {
+  const email = normalizeEmail(currentUserEmail);
+  return superAdmins.map(normalizeEmail).includes(email) || adminEmails.includes(email);
+}
+
+async function saveAdminEmails() {
+  const list = [...new Set(adminEmails.map(normalizeEmail).filter(Boolean))];
+  adminEmails = [...new Set([...superAdmins.map(normalizeEmail), ...list])];
+
+  await setDoc(doc(db, "settings", "admins"), {
+    emails: adminEmails,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+
+  renderAdminEmailList();
+}
+
+function renderAdminEmailList() {
+  const el = document.getElementById("adminEmailList");
+  if (!el) return;
+
+  if (!adminEmails.length) {
+    el.innerHTML = '<div class="empty">目前尚未建立管理員名單</div>';
+    return;
+  }
+
+  const superSet = new Set(superAdmins.map(normalizeEmail));
+
+  el.innerHTML = adminEmails.map((email) => {
+    const isSuper = superSet.has(normalizeEmail(email));
+    return `<div class="admin-email-item">
+      <strong>${escapeHtml(email)}${isSuper ? '<span class="tag-super">最高管理員</span>' : ""}</strong>
+      ${isSuper ? "" : `<button type="button" class="ghost-btn" data-remove-admin="${escapeHtml(email)}">移除</button>`}
+    </div>`;
+  }).join("");
+}
+
+async function addAdminEmail() {
+  const input = document.getElementById("adminEmailInput");
+  if (!input) return;
+
+  const email = normalizeEmail(input.value);
+  if (!email || !email.includes("@")) {
+    alert("請輸入正確的 Email。");
+    return;
+  }
+
+  adminEmails = [...new Set([...adminEmails, email])];
+
+  try {
+    await saveAdminEmails();
+    input.value = "";
+    alert("已新增老師管理員。");
+  } catch (e) {
+    console.error(e);
+    alert("新增失敗：\n" + e.message);
+  }
+}
+
+async function removeAdminEmail(email) {
+  const normalized = normalizeEmail(email);
+  if (superAdmins.map(normalizeEmail).includes(normalized)) {
+    alert("最高管理員不可移除。");
+    return;
+  }
+
+  if (!confirm("確定要移除這位老師的後台權限？\n" + normalized)) return;
+
+  adminEmails = adminEmails.filter((x) => normalizeEmail(x) !== normalized);
+
+  try {
+    await saveAdminEmails();
+    alert("已移除。");
+  } catch (e) {
+    console.error(e);
+    alert("移除失敗：\n" + e.message);
+  }
+}
+
+$("loginBtn").disabled = true;
     $("loginBtn").textContent = "登入中...";
     await signInWithPopup(auth, provider);
   } catch (e) {
@@ -47,14 +165,17 @@ bindIfExists("loginBtn", "onclick", async () => {
 
 bindIfExists("logoutBtn", "onclick", () => signOut(auth));
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     $("loginView").classList.remove("hidden");
     $("appView").classList.add("hidden");
     return;
   }
 
-  if (!allowedAdmins.includes(user.email)) {
+  currentUserEmail = user.email;
+  await loadAdminEmails();
+
+  if (!isCurrentAdmin()) {
     alert("這個帳號沒有後台權限：" + user.email);
     signOut(auth);
     return;
@@ -514,3 +635,13 @@ function escapeHtml(str) {
     "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
   }[m]));
 }
+
+
+// v4.1 管理員名單操作
+if (document.getElementById("addAdminBtn")) {
+  document.getElementById("addAdminBtn").addEventListener("click", addAdminEmail);
+}
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-remove-admin]");
+  if (btn) removeAdminEmail(btn.dataset.removeAdmin);
+});
