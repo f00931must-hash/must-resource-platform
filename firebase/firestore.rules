@@ -2,43 +2,46 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function signedIn() {
       return request.auth != null && request.auth.token.email != null;
     }
-
-    function isSuperAdmin() {
-      return signedIn() && request.auth.token.email in [
-        "master004400@gmail.com"
-      ];
+    function email() {
+      return request.auth.token.email;
     }
-
     function adminDocExists() {
       return exists(/databases/$(database)/documents/settings/admins);
     }
-
-    function isListedAdmin() {
-      return signedIn()
-        && adminDocExists()
-        && request.auth.token.email in get(/databases/$(database)/documents/settings/admins).data.emails;
+    function adminData() {
+      return get(/databases/$(database)/documents/settings/admins).data;
     }
-
-    function isAdmin() {
-      return isSuperAdmin() || isListedAdmin();
+    function isBuiltInSuperAdmin() {
+      return signedIn() && email() in ["master004400@gmail.com"];
+    }
+    function isSuperAdmin() {
+      return isBuiltInSuperAdmin()
+        || (signedIn() && adminDocExists() && email() in adminData().superAdmins);
+    }
+    function isTeacher() {
+      return isSuperAdmin()
+        || (signedIn() && adminDocExists() && email() in adminData().teachers);
+    }
+    function isAssistant() {
+      return signedIn() && adminDocExists() && email() in adminData().assistants;
+    }
+    function isAnyStaff() {
+      return isSuperAdmin() || isTeacher() || isAssistant();
     }
 
     match /announcements/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create: if isTeacher() || (isAssistant() && request.resource.data.published == false);
+      allow update: if isTeacher() || (isAssistant() && request.resource.data.published == false);
+      allow delete: if isTeacher();
     }
 
     match /settings/admins {
-      allow read: if isAdmin();
-
-      // 最高管理員可建立名單；已在名單內的老師也可讀取與維護名單。
-      allow create, update: if isAdmin();
-
-      // 避免誤刪整份管理員名單。
+      allow read: if isAnyStaff() || isBuiltInSuperAdmin();
+      allow create, update: if isSuperAdmin() || isBuiltInSuperAdmin();
       allow delete: if false;
     }
   }

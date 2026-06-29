@@ -27,7 +27,7 @@
       <button class="nav-item" data-view="library">📁 附件中心</button>
       <button class="nav-item" data-view="settings">⚙ 系統設定</button>
     </nav>
-    <div class="version-pill">v4.1</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
+    <div class="version-pill">v4.1</div><div class="version-pill">v4.2</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
   </aside>
 
   <main class="dashboard">
@@ -90,6 +90,7 @@
             <label class="switch-line"><input id="published" type="checkbox" checked><span>發布到前台</span></label>
             <label class="switch-line"><input id="pinned" type="checkbox"><span>置頂 / 重要</span></label>
           </div>
+          <p id="assistantHint" class="small-note hidden">📝 助理帳號只能建立或修改草稿，不能正式發布。</p>
 
           <label>內容</label>
           <textarea id="content" class="field content-field"></textarea>
@@ -121,7 +122,8 @@
       </section>
     </section>
 
-    <section id="view-settings" class="view hidden">
+
+<section id="view-settings" class="view hidden">
       <section class="panel">
         <h2>⚙ 系統設定</h2>
 
@@ -145,16 +147,29 @@
 
         <hr class="soft-line">
 
-        <h3>管理員老師名單</h3>
-        <p>新增可登入後台的老師 Google Email。請只新增資源教室同仁，不要新增學生。</p>
-        <div class="admin-email-row">
-          <input id="adminEmailInput" class="field" placeholder="輸入老師 Email，例如 teacher@example.edu.tw">
-          <button id="addAdminBtn" type="button" class="primary-btn">新增老師</button>
+        <div id="roleManager">
+          <h3>管理員老師名單</h3>
+          <p>新增可以登入後台的老師或助理。請只新增資源教室同仁，不要新增學生。</p>
+          <div class="role-form">
+            <input id="staffName" class="field" placeholder="姓名，例如 王老師">
+            <input id="staffEmail" class="field" placeholder="Google Email，例如 teacher@must.edu.tw">
+            <select id="staffRole" class="field">
+              <option value="teacher">👨‍🏫 老師：可發布/修改/刪除公告</option>
+              <option value="assistant">📝 助理：只能建立/修改草稿</option>
+              <option value="superAdmin">👑 超級管理員：可管理老師與系統</option>
+            </select>
+            <button id="addStaffBtn" type="button" class="primary-btn">新增 / 更新</button>
+          </div>
+          <div id="staffList" class="staff-list">管理員名單載入中...</div>
         </div>
-        <div id="adminEmailList" class="admin-email-list">管理員名單載入中...</div>
 
+        <div id="roleManagerLocked" class="hidden">
+          <h3>管理員老師名單</h3>
+          <p>只有超級管理員可以新增或移除老師。</p>
+        </div>
       </section>
     </section>
+
   </main>
 </div>
 

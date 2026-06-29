@@ -1,19 +1,13 @@
-# MUST Resource Platform v4.1
+# MUST Resource Platform v4.2
 
-資源教室公告管理平台。
-
-## v4.1 新功能
-- 多位老師管理員
-- 後台「系統設定」可新增 / 移除老師 Email
-- 管理員名單存放於 Firestore：`settings/admins`
-- Firestore Rules 改為讀取管理員名單判斷權限
-- 保留 v4.0 AI 公告助手、圖片/附件拖曳、LINE 版本、公告模板
+## 新功能
+- 多位老師共同管理
+- 後台可新增 / 移除 / 修改管理員
+- 權限分級：
+  - 👑 超級管理員：可管理老師、系統與公告
+  - 👨‍🏫 老師：可發布、修改、刪除公告
+  - 📝 助理：可建立與修改草稿，不能發布與刪除
+- Firestore Rules 安全版
 
 ## 重要
-更新 v4.1 後，請同步更新 Firebase Firestore Rules，使用 `firebase/firestore.rules` 裡面的規則。
-
-## 第一位最高管理員
-預設最高管理員：
-master004400@gmail.com
-
-這個帳號永遠保留管理權限，用來新增其他老師。
+上傳 v4.2 後，請到 Firebase → Firestore Database → Rules，把 `firebase/firestore.rules` 內容貼上並發布。

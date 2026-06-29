@@ -47,3 +47,13 @@ body{background:#f7f7fb}.login-view{min-height:100vh;display:grid;place-items:ce
 .admin-email-item strong{font-size:14px}
 .admin-email-item .tag-super{font-size:12px;color:#888;margin-left:6px}
 @media(max-width:800px){.admin-email-row{grid-template-columns:1fr}}
+
+/* v4.2 roles */
+.version-pill{display:inline-block;margin:6px 0 12px;padding:4px 9px;border-radius:999px;background:#ff5ca833;color:#ffd6e5;font-size:12px;font-weight:900}
+.role-form{display:grid;grid-template-columns:1fr 1.2fr 1.4fr auto;gap:10px;align-items:center;margin:12px 0}
+.staff-list{display:grid;gap:10px;margin-top:14px}
+.staff-card{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--pink-soft);background:#fffafd;border-radius:16px;padding:12px 14px}
+.staff-name{font-weight:900;font-size:16px}
+.staff-email{font-size:13px;color:#666;word-break:break-all;margin-top:4px}
+.role-badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#fff0f7;color:var(--pink);margin-left:6px}
+@media(max-width:1000px){.role-form{grid-template-columns:1fr}.staff-card{grid-template-columns:1fr}}
