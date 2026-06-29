@@ -18,3 +18,23 @@ body{background:#f7f7fb}.login-view{min-height:100vh;display:grid;place-items:ce
 .library-meta{font-size:13px;color:#888;margin-bottom:10px}
 .library-file{display:flex;align-items:center;gap:10px;border:1px solid var(--pink-soft);border-radius:14px;background:#fffafd;padding:12px;margin:8px 0;text-decoration:none;color:var(--pink);font-weight:900;overflow-wrap:anywhere}
 .library-file small{display:block;color:#888;font-weight:400;margin-top:4px}
+
+
+/* v4.0.1 強制修正附件中心與 AI 視窗 */
+.ai-box{border:1px solid var(--pink-soft);background:#fffafd;border-radius:18px;padding:14px;margin-bottom:14px}
+.ai-title{font-weight:900;margin-bottom:10px}
+.small-note{font-size:13px;color:#777;margin:8px 0 0}
+.soft-line{border:0;border-top:1px solid var(--line);margin:22px 0}
+.ai-result{min-height:300px;white-space:pre-line;line-height:1.7}
+.library-list{display:grid!important;grid-template-columns:1fr!important;gap:16px!important;width:100%!important;max-width:100%!important}
+.library-group{display:block!important;width:100%!important;max-width:100%!important;border:1px solid var(--line)!important;border-radius:18px!important;padding:16px!important;background:#fff!important;overflow:hidden!important}
+.library-group h3{margin:0 0 8px!important;font-size:18px!important;line-height:1.5!important;overflow-wrap:anywhere!important}
+.library-meta{font-size:13px!important;color:#888!important;margin-bottom:10px!important}
+.library-file{display:flex!important;align-items:flex-start!important;gap:10px!important;width:100%!important;max-width:100%!important;border:1px solid var(--pink-soft)!important;border-radius:14px!important;background:#fffafd!important;padding:12px!important;margin:8px 0!important;text-decoration:none!important;color:var(--pink)!important;font-weight:900!important;white-space:normal!important;word-break:break-word!important;overflow-wrap:anywhere!important;line-height:1.45!important}
+.library-file small{display:block!important;color:#888!important;font-weight:400!important;margin-top:4px!important;word-break:break-all!important}
+.admin-modal{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:999;padding:24px}
+.admin-modal-card{background:white;max-width:820px;max-height:88vh;overflow:auto;margin:30px auto;border-radius:26px;padding:28px;box-shadow:0 25px 80px rgba(0,0,0,.22)}
+.modal-close{float:right;border:0;background:#f4f4f4;border-radius:999px;width:36px;height:36px;font-size:24px;cursor:pointer}
+.preview-cover{width:100%;max-height:340px;object-fit:cover;border-radius:18px;border:1px solid var(--line);margin:12px 0}
+.preview-content{white-space:pre-line;line-height:1.9}
+.tool-row{display:flex;gap:8px;flex-wrap:wrap}

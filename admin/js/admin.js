@@ -10,25 +10,12 @@ let announcements = [];
 let adminKeyword = "";
 let uploadedImages = [];
 let uploadedFiles = [];
-let lastAiText = "";
 
 const templates = {
-  activity: {
-    category: "活動",
-    content: "📢【活動通知】\n\n活動名稱：\n活動日期：\n活動地點：\n參加對象：\n報名方式：\n注意事項：\n聯絡窗口："
-  },
-  scholarship: {
-    category: "獎助學金",
-    content: "🎓【獎助學金申請通知】\n\n申請資格：\n申請期限：\n申請方式：\n應備文件：\n注意事項：\n聯絡窗口："
-  },
-  course: {
-    category: "修課通知",
-    content: "📚【修課通知】\n\n適用對象：\n重要時程：\n辦理方式：\n注意事項：\n相關連結／附件：\n聯絡窗口："
-  },
-  general: {
-    category: "公告",
-    content: "📢【公告】\n\n說明：\n辦理方式：\n注意事項：\n聯絡窗口："
-  }
+  activity: { category: "活動", content: "📢【活動通知】\n\n活動名稱：\n活動日期：\n活動地點：\n參加對象：\n報名方式：\n注意事項：\n聯絡窗口：" },
+  scholarship: { category: "獎助學金", content: "🎓【獎助學金申請通知】\n\n申請資格：\n申請期限：\n申請方式：\n應備文件：\n注意事項：\n聯絡窗口：" },
+  course: { category: "修課通知", content: "📚【修課通知】\n\n適用對象：\n重要時程：\n辦理方式：\n注意事項：\n相關連結／附件：\n聯絡窗口：" },
+  general: { category: "公告", content: "📢【公告】\n\n說明：\n辦理方式：\n注意事項：\n聯絡窗口：" }
 };
 
 const aiPrompts = {
@@ -39,7 +26,12 @@ const aiPrompts = {
   emoji: "請將以下公告內容整理得更容易閱讀，加入適量 emoji，但不要太花俏。請使用繁體中文。"
 };
 
-$("loginBtn").onclick = async () => {
+function bindIfExists(id, eventName, handler) {
+  const el = $(id);
+  if (el) el[eventName] = handler;
+}
+
+bindIfExists("loginBtn", "onclick", async () => {
   try {
     $("loginBtn").disabled = true;
     $("loginBtn").textContent = "登入中...";
@@ -51,9 +43,9 @@ $("loginBtn").onclick = async () => {
     $("loginBtn").disabled = false;
     $("loginBtn").textContent = "使用 Google 登入";
   }
-};
+});
 
-$("logoutBtn").onclick = () => signOut(auth);
+bindIfExists("logoutBtn", "onclick", () => signOut(auth));
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
@@ -71,20 +63,20 @@ onAuthStateChanged(auth, (user) => {
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
   $("userInfo").textContent = user.email;
-  $("githubToken").value = localStorage.getItem("mrp_github_token") || "";
-  $("openaiKey").value = localStorage.getItem("mrp_openai_key") || "";
-  $("openaiModel").value = localStorage.getItem("mrp_openai_model") || "gpt-5.5";
+
+  if ($("githubToken")) $("githubToken").value = localStorage.getItem("mrp_github_token") || "";
+  if ($("openaiKey")) $("openaiKey").value = localStorage.getItem("mrp_openai_key") || "";
+  if ($("openaiModel")) $("openaiModel").value = localStorage.getItem("mrp_openai_model") || "gpt-5.5";
+
   resetForm();
   listenPosts();
 });
 
 let unsubscribe = null;
-
 function listenPosts() {
   if (unsubscribe) return;
-
   unsubscribe = onSnapshot(query(collection(db, "announcements"), orderBy("date", "desc")), (snapshot) => {
-    announcements = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    announcements = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     updateStats();
     renderList();
     renderRecent();
@@ -103,40 +95,30 @@ function showView(view) {
   document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => v.classList.add("hidden"));
   $("view-" + view).classList.remove("hidden");
-
-  const titleMap = {
-    dashboard: "儀表板",
-    posts: "公告管理",
-    library: "附件中心",
-    settings: "系統設定"
-  };
-  $("pageTitle").textContent = titleMap[view] || "管理平台";
+  $("pageTitle").textContent = {dashboard:"儀表板", posts:"公告管理", library:"附件中心", settings:"系統設定"}[view] || "管理平台";
 }
 
-$("saveTokenBtn").onclick = () => {
+bindIfExists("saveTokenBtn", "onclick", () => {
   localStorage.setItem("mrp_github_token", $("githubToken").value.trim());
   alert("Token 已儲存於此瀏覽器");
-};
-
-$("clearTokenBtn").onclick = () => {
+});
+bindIfExists("clearTokenBtn", "onclick", () => {
   localStorage.removeItem("mrp_github_token");
   $("githubToken").value = "";
   alert("已清除 Token");
-};
-
-$("saveOpenAiBtn").onclick = () => {
+});
+bindIfExists("saveOpenAiBtn", "onclick", () => {
   localStorage.setItem("mrp_openai_key", $("openaiKey").value.trim());
   localStorage.setItem("mrp_openai_model", $("openaiModel").value.trim() || "gpt-5.5");
   alert("AI 設定已儲存於此瀏覽器");
-};
-
-$("clearOpenAiBtn").onclick = () => {
+});
+bindIfExists("clearOpenAiBtn", "onclick", () => {
   localStorage.removeItem("mrp_openai_key");
   localStorage.removeItem("mrp_openai_model");
   $("openaiKey").value = "";
   $("openaiModel").value = "gpt-5.5";
   alert("已清除 AI 設定");
-};
+});
 
 setupDrop("imageDrop", "imageInput", "image");
 setupDrop("fileDrop", "fileInput", "file");
@@ -144,28 +126,21 @@ setupDrop("fileDrop", "fileInput", "file");
 function setupDrop(zoneId, inputId, type) {
   const zone = $(zoneId);
   const input = $(inputId);
+  if (!zone || !input) return;
 
   zone.onclick = () => input.click();
-
-  zone.ondragover = (e) => {
-    e.preventDefault();
-    zone.classList.add("dragover");
-  };
-
+  zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("dragover"); };
   zone.ondragleave = () => zone.classList.remove("dragover");
-
   zone.ondrop = (e) => {
     e.preventDefault();
     zone.classList.remove("dragover");
     handleFiles([...e.dataTransfer.files], type);
   };
-
   input.onchange = () => handleFiles([...input.files], type);
 }
 
 async function handleFiles(files, type) {
   const token = localStorage.getItem("mrp_github_token");
-
   if (!token) {
     alert("請先到「系統設定」貼上 GitHub Token，才能拖曳上傳檔案。");
     return;
@@ -181,16 +156,15 @@ async function handleFiles(files, type) {
       alert("上傳失敗：" + file.name + "\n" + e.message);
     }
   }
-
   renderPreviews();
 }
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
   });
 }
 
@@ -202,92 +176,73 @@ async function uploadToGithub(file, token, type) {
   const path = `frontend/assets/uploads/${yyyy}/${mm}/${Date.now()}_${safeName}`;
   const content = await fileToBase64(file);
 
-  const response = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${path}`, {
+  const res = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${path}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      message: `upload ${type}: ${file.name}`,
-      content,
-      branch: githubConfig.branch
-    })
+    body: JSON.stringify({ message: `upload ${type}: ${file.name}`, content, branch: githubConfig.branch })
   });
 
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message || "GitHub API error");
-
-  return {
-    name: file.name,
-    url: path,
-    size: file.size,
-    type: file.type
-  };
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "GitHub API error");
+  return { name:file.name, url:path, size:file.size, type:file.type };
 }
 
 function renderPreviews() {
-  $("imagePreview").innerHTML = uploadedImages.map((x, i) => `
-    <div class="preview-item">
-      <img src="../${x.url}">
-      <div>${escapeHtml(x.name)}</div>
-      <button type="button" class="remove-mini" data-img="${i}">移除</button>
-    </div>
-  `).join("");
+  if ($("imagePreview")) {
+    $("imagePreview").innerHTML = uploadedImages.map((x, i) => `
+      <div class="preview-item">
+        <img src="../${x.url}">
+        <div>${escapeHtml(x.name)}</div>
+        <button type="button" class="remove-mini" data-img="${i}">移除</button>
+      </div>`).join("");
+  }
 
-  $("filePreview").innerHTML = uploadedFiles.map((x, i) => `
-    <div class="preview-item">
-      <strong>📎 ${escapeHtml(x.name)}</strong><br>
-      <small>${Math.round((x.size || 0) / 1024)} KB</small>
-      <button type="button" class="remove-mini" data-file="${i}">移除</button>
-    </div>
-  `).join("");
+  if ($("filePreview")) {
+    $("filePreview").innerHTML = uploadedFiles.map((x, i) => `
+      <div class="preview-item">
+        <strong>📎 ${escapeHtml(x.name)}</strong><br>
+        <small>${Math.round((x.size || 0) / 1024)} KB</small>
+        <button type="button" class="remove-mini" data-file="${i}">移除</button>
+      </div>`).join("");
+  }
 
   document.querySelectorAll("[data-img]").forEach((btn) => {
-    btn.onclick = () => {
-      uploadedImages.splice(Number(btn.dataset.img), 1);
-      renderPreviews();
-    };
+    btn.onclick = () => { uploadedImages.splice(Number(btn.dataset.img), 1); renderPreviews(); };
   });
-
   document.querySelectorAll("[data-file]").forEach((btn) => {
-    btn.onclick = () => {
-      uploadedFiles.splice(Number(btn.dataset.file), 1);
-      renderPreviews();
-    };
+    btn.onclick = () => { uploadedFiles.splice(Number(btn.dataset.file), 1); renderPreviews(); };
   });
 }
 
-$("resetBtn").onclick = resetForm;
-
-$("adminSearch").oninput = (e) => {
+bindIfExists("resetBtn", "onclick", resetForm);
+bindIfExists("adminSearch", "oninput", (e) => {
   adminKeyword = e.target.value.trim();
   renderList();
-};
-
-$("templateSelect").onchange = (e) => {
+});
+bindIfExists("templateSelect", "onchange", (e) => {
   const t = templates[e.target.value];
   if (!t) return;
-
   if ($("content").value.trim() && !confirm("套用模板會覆蓋目前內容，確定嗎？")) return;
-
   $("category").value = t.category;
   $("content").value = t.content;
-};
+});
 
-$("previewBtn").onclick = () => showPreviewFromForm();
-$("lineBtn").onclick = () => copyLineTextFromForm();
-$("closePreviewBtn").onclick = () => $("previewModal").classList.add("hidden");
-$("closeAiBtn").onclick = () => $("aiModal").classList.add("hidden");
-$("applyAiBtn").onclick = () => {
+bindIfExists("previewBtn", "onclick", showPreviewFromForm);
+bindIfExists("lineBtn", "onclick", copyLineTextFromForm);
+bindIfExists("closePreviewBtn", "onclick", () => $("previewModal").classList.add("hidden"));
+bindIfExists("closeAiBtn", "onclick", () => $("aiModal").classList.add("hidden"));
+bindIfExists("applyAiBtn", "onclick", () => {
   if ($("aiResult").value.trim()) $("content").value = $("aiResult").value.trim();
   $("aiModal").classList.add("hidden");
-};
-$("copyAiBtn").onclick = async () => {
+});
+bindIfExists("copyAiBtn", "onclick", async () => {
   await navigator.clipboard.writeText($("aiResult").value);
   alert("已複製");
-};
+});
 
 document.querySelectorAll(".ai-action").forEach((btn) => {
   btn.onclick = () => runAi(btn.dataset.ai);
@@ -297,6 +252,7 @@ async function runAi(mode) {
   const data = currentFormData();
   const instruction = aiPrompts[mode] || aiPrompts.formal;
   const source = `標題：${data.title}\n分類：${data.category}\n發布日期：${data.date}\n截止日期：${data.deadline || "無"}\n\n內容：\n${data.content}`;
+  const prompt = `${instruction}\n\n${source}`;
 
   if (!data.content.trim() && !data.title.trim()) {
     alert("請先輸入標題或公告內容，再使用 AI。");
@@ -306,12 +262,10 @@ async function runAi(mode) {
   const apiKey = localStorage.getItem("mrp_openai_key") || "";
   const model = localStorage.getItem("mrp_openai_model") || "gpt-5.5";
 
-  const prompt = `${instruction}\n\n${source}`;
-
   if (!apiKey) {
     $("aiResult").value = `請幫我處理以下資源教室公告。\n\n需求：${instruction}\n\n公告內容：\n${source}`;
     $("aiModal").classList.remove("hidden");
-    await navigator.clipboard.writeText($("aiResult").value);
+    try { await navigator.clipboard.writeText($("aiResult").value); } catch {}
     alert("尚未設定 OpenAI API Key，已改為複製 ChatGPT 提示詞。");
     return;
   }
@@ -322,25 +276,13 @@ async function runAi(mode) {
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        input: prompt
-      })
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model, input: prompt })
     });
 
     const json = await response.json();
-
-    if (!response.ok) {
-      throw new Error(json.error?.message || "OpenAI API error");
-    }
-
-    const text = json.output_text || extractResponseText(json) || "AI 沒有回傳文字。";
-    lastAiText = text;
-    $("aiResult").value = text;
+    if (!response.ok) throw new Error(json.error?.message || "OpenAI API error");
+    $("aiResult").value = json.output_text || extractResponseText(json) || "AI 沒有回傳文字。";
   } catch (e) {
     console.error(e);
     $("aiResult").value = `AI 呼叫失敗：${e.message}\n\n已改為提示詞模式，請複製以下內容到 ChatGPT：\n\n${prompt}`;
@@ -349,14 +291,8 @@ async function runAi(mode) {
 
 function extractResponseText(json) {
   try {
-    return json.output
-      ?.flatMap((item) => item.content || [])
-      ?.map((c) => c.text || "")
-      ?.join("\n")
-      ?.trim();
-  } catch {
-    return "";
-  }
+    return json.output?.flatMap((item) => item.content || [])?.map((c) => c.text || "")?.join("\n")?.trim();
+  } catch { return ""; }
 }
 
 function updateStats() {
@@ -378,25 +314,14 @@ $("postForm").onsubmit = async (e) => {
     return;
   }
 
-  const urlImages = $("imageUrlInput").value
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .map((url) => ({ url, name: url.split("/").pop() }));
-
-  const urlFiles = $("fileUrlInput").value
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [name, url] = line.split("|").map((x) => x.trim());
-      return { name: name || url, url: url || name };
-    });
+  const urlImages = $("imageUrlInput").value.split("\n").map((x) => x.trim()).filter(Boolean).map((url) => ({ url, name: url.split("/").pop() }));
+  const urlFiles = $("fileUrlInput").value.split("\n").map((x) => x.trim()).filter(Boolean).map((line) => {
+    const [name, url] = line.split("|").map((x) => x.trim());
+    return { name:name || url, url:url || name };
+  });
 
   const data = {
-    title,
-    content,
-    date,
+    title, content, date,
     deadline: $("deadline").value || "",
     category: $("category").value,
     published: $("published").checked,
@@ -408,13 +333,11 @@ $("postForm").onsubmit = async (e) => {
 
   try {
     const id = $("editId").value;
-
     if (id) await updateDoc(doc(db, "announcements", id), data);
     else {
       data.createdAt = serverTimestamp();
       await addDoc(collection(db, "announcements"), data);
     }
-
     alert("已儲存");
     resetForm();
   } catch (e) {
@@ -424,10 +347,7 @@ $("postForm").onsubmit = async (e) => {
 };
 
 function renderList() {
-  const data = announcements.filter((a) =>
-    !adminKeyword || (a.title || "").includes(adminKeyword) || (a.content || "").includes(adminKeyword)
-  );
-
+  const data = announcements.filter((a) => !adminKeyword || (a.title || "").includes(adminKeyword) || (a.content || "").includes(adminKeyword));
   $("postList").innerHTML = data.length ? data.map(cardHtml).join("") : '<div class="empty">目前沒有內容</div>';
   bindCardButtons();
 }
@@ -452,26 +372,17 @@ function cardHtml(a) {
 }
 
 function bindCardButtons() {
-  document.querySelectorAll("[data-line]").forEach((btn) => {
-    btn.onclick = () => copyLineText(btn.dataset.line);
-  });
-
-  document.querySelectorAll("[data-edit]").forEach((btn) => {
-    btn.onclick = () => editPost(btn.dataset.edit);
-  });
-
+  document.querySelectorAll("[data-line]").forEach((btn) => { btn.onclick = () => copyLineText(btn.dataset.line); });
+  document.querySelectorAll("[data-edit]").forEach((btn) => { btn.onclick = () => editPost(btn.dataset.edit); });
   document.querySelectorAll("[data-delete]").forEach((btn) => {
     btn.onclick = async () => {
-      if (confirm("確定刪除這筆內容？")) {
-        await deleteDoc(doc(db, "announcements", btn.dataset.delete));
-      }
+      if (confirm("確定刪除這筆內容？")) await deleteDoc(doc(db, "announcements", btn.dataset.delete));
     };
   });
 }
 
 function renderLibrary() {
   const groups = announcements.filter((a) => (a.files || []).length);
-
   if (!groups.length) {
     $("libraryList").innerHTML = '<div class="empty">目前沒有附件</div>';
     return;
@@ -511,19 +422,20 @@ function editPost(id) {
   $("category").value = a.category || "公告";
   $("published").checked = a.published !== false;
   $("pinned").checked = !!a.pinned;
-  $("templateSelect").value = "";
+  if ($("templateSelect")) $("templateSelect").value = "";
   uploadedImages = a.images || [];
   uploadedFiles = a.files || [];
   $("imageUrlInput").value = "";
   $("fileUrlInput").value = "";
   renderPreviews();
-  scrollTo({ top: 0, behavior: "smooth" });
+  scrollTo({ top:0, behavior:"smooth" });
 }
 
 function resetForm() {
+  if (!$("editId")) return;
   $("editId").value = "";
   $("formTitle").textContent = "新增內容";
-  $("templateSelect").value = "";
+  if ($("templateSelect")) $("templateSelect").value = "";
   $("title").value = "";
   $("content").value = "";
   $("category").value = "公告";
@@ -539,20 +451,11 @@ function resetForm() {
 }
 
 function currentFormData() {
-  const urlImages = $("imageUrlInput").value
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .map((url) => ({ url, name: url.split("/").pop() }));
-
-  const urlFiles = $("fileUrlInput").value
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [name, url] = line.split("|").map((x) => x.trim());
-      return { name: name || url, url: url || name };
-    });
+  const urlImages = $("imageUrlInput").value.split("\n").map((x) => x.trim()).filter(Boolean).map((url) => ({ url, name:url.split("/").pop() }));
+  const urlFiles = $("fileUrlInput").value.split("\n").map((x) => x.trim()).filter(Boolean).map((line) => {
+    const [name, url] = line.split("|").map((x) => x.trim());
+    return { name:name || url, url:url || name };
+  });
 
   return {
     title: $("title").value.trim() || "(未輸入標題)",
@@ -573,14 +476,8 @@ function normalizePreviewUrl(url) {
 
 function showPreviewFromForm() {
   const a = currentFormData();
-
-  const imgs = (a.images || [])
-    .map((img) => `<img class="preview-cover" src="${normalizePreviewUrl(img.url)}">`)
-    .join("");
-
-  const files = (a.files || [])
-    .map((f) => `<div class="field">📎 ${escapeHtml(f.name)}</div>`)
-    .join("");
+  const imgs = (a.images || []).map((img) => `<img class="preview-cover" src="${normalizePreviewUrl(img.url)}">`).join("");
+  const files = (a.files || []).map((f) => `<div class="field">📎 ${escapeHtml(f.name)}</div>`).join("");
 
   $("previewContent").innerHTML = `
     <span class="badge">${escapeHtml(a.category)}</span>
@@ -596,14 +493,12 @@ function showPreviewFromForm() {
 
 function makeLineText(a) {
   const files = (a.files || []).map((f) => `📎 ${f.name}`).join("\n");
-
   return `📢【${a.title}】\n\n${a.content || ""}\n\n📅 發布日期：${a.date || ""}${a.deadline ? `\n⏰ 截止日期：${a.deadline}` : ""}${files ? `\n\n${files}` : ""}`.trim();
 }
 
 async function copyLineText(id) {
   const a = announcements.find((x) => x.id === id);
   if (!a) return;
-
   await navigator.clipboard.writeText(makeLineText(a));
   alert("已複製 LINE 版本文字");
 }
@@ -616,10 +511,6 @@ async function copyLineTextFromForm() {
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (m) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
   }[m]));
 }
