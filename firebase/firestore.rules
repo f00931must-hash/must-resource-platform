@@ -4,9 +4,7 @@ service cloud.firestore {
     match /announcements/{docId} {
       allow read: if true;
       allow create, update, delete: if request.auth != null
-        && request.auth.token.email in [
-          "master004400@gmail.com"
-        ];
+        && request.auth.token.email in ["master004400@gmail.com"];
     }
   }
 }
