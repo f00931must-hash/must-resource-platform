@@ -20,13 +20,15 @@
 
 <div id="appView" class="admin-shell hidden">
   <aside class="sidebar">
-    <a class="brand brand-link" href="../frontend/" title="回到公告首頁"><div class="logo small-logo">M</div><div><strong>資源教室</strong><span>管理平台</span></div></a>
+    <div class="brand"><div class="logo small-logo">M</div><div><strong>資源教室</strong><span>管理平台</span></div></div>
     <nav>
       <button class="nav-item active" data-view="dashboard">🏠 儀表板</button>
       <button class="nav-item" data-view="posts">📢 公告管理</button>
       <button class="nav-item" data-view="library">📁 附件中心</button>
+      <button class="nav-item" data-view="capacity">💾 容量管理</button>
       <button class="nav-item" data-view="settings">⚙ 系統設定</button>
-    </nav><div class="version-bottom">v4.2.1</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
+    </nav>
+    <div class="version-pill">v4.1</div><div class="version-pill">v4.3</div><div id="sidebarCapacityStatus" class="capacity-mini">v4.3<br>容量讀取中...</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
   </aside>
 
   <main class="dashboard">
@@ -122,12 +124,53 @@
     </section>
 
 
-<section id="view-settings" class="view hidden">
+
+    <section id="view-capacity" class="view hidden">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>💾 容量管理中心</h2>
+          <button id="refreshCapacityBtn" type="button" class="ghost-btn">重新整理容量</button>
+        </div>
+
+        <section class="capacity-hero">
+          <div>
+            <div class="eyebrow">GitHub Repository</div>
+            <h2 id="repoSizeText">容量讀取中...</h2>
+            <p id="repoStatusText">請確認 GitHub Token 已設定。</p>
+          </div>
+          <div class="capacity-ring">
+            <strong id="repoPercentText">--%</strong>
+            <span id="repoLightText">⚪</span>
+          </div>
+        </section>
+
+        <div class="capacity-bar"><div id="capacityBarFill"></div></div>
+
+        <section class="stats capacity-stats">
+          <div class="stat-card"><span>公告數</span><strong id="capPostCount">0</strong></div>
+          <div class="stat-card"><span>附件數</span><strong id="capFileCount">0</strong></div>
+          <div class="stat-card"><span>附件估算</span><strong id="capKnownSize">0 MB</strong></div>
+          <div class="stat-card"><span>最大附件</span><strong id="capLargestFile">-</strong></div>
+        </section>
+
+        <section class="capacity-grid">
+          <div class="capacity-card"><h3>依檔案類型</h3><div id="typeStats"></div></div>
+          <div class="capacity-card"><h3>依年度</h3><div id="yearStats"></div></div>
+        </section>
+
+        <section class="capacity-card">
+          <h3>大型附件 Top 10</h3>
+          <div id="largestFilesList"></div>
+        </section>
+      </section>
+    </section>
+
+    <section id="view-settings" class="view hidden">
       <section class="panel">
         <h2>⚙ 系統設定</h2>
 
         <h3>GitHub Token</h3>
-        <p>GitHub Token 只存在此瀏覽器，用於拖曳上傳檔案到 Repository。每位老師自己的瀏覽器都要設定一次 Token，才可以拖曳上傳圖片或附件。</p>
+        <p>GitHub Token 只存在此瀏覽器，用於拖曳上傳檔案到 Repository。</p>
         <label>GitHub Token</label>
         <input id="githubToken" class="field" type="password" placeholder="貼上 fine-grained token">
         <button id="saveTokenBtn" class="primary-btn">儲存 Token</button>

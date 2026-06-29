@@ -58,35 +58,103 @@ body{background:#f7f7fb}.login-view{min-height:100vh;display:grid;place-items:ce
 .role-badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#fff0f7;color:var(--pink);margin-left:6px}
 @media(max-width:1000px){.role-form{grid-template-columns:1fr}.staff-card{grid-template-columns:1fr}}
 
-/* v4.2.1 small UI polish */
-.brand-link{
-  text-decoration:none;
-  color:inherit;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  border-radius:18px;
-  padding:4px;
-  margin:-4px;
-}
-.brand-link:hover{
-  background:rgba(255,255,255,.08);
-}
-.version-pill{
-  display:none!important;
-}
-.version-bottom{
+/* v4.3 capacity management */
+.capacity-mini{
   margin-top:auto;
   margin-bottom:10px;
-  padding:4px 8px;
-  border-radius:999px;
-  color:rgba(255,255,255,.45);
+  padding:6px 8px;
+  border-radius:12px;
+  color:rgba(255,255,255,.55);
   font-size:11px;
-  font-weight:700;
-  text-align:left;
+  line-height:1.45;
+  background:rgba(255,255,255,.05);
   width:max-content;
 }
-.sidebar{
+.capacity-hero{
   display:flex;
-  flex-direction:column;
+  justify-content:space-between;
+  align-items:center;
+  gap:18px;
+  padding:22px;
+  border-radius:22px;
+  background:linear-gradient(135deg,#fff0f7,#fff);
+  border:1px solid var(--pink-soft);
+  margin-bottom:14px;
+}
+.capacity-ring{
+  width:124px;
+  height:124px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#fff;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+.capacity-ring strong{display:block;font-size:26px}
+.capacity-ring span{display:block;font-size:22px}
+.capacity-bar{
+  height:14px;
+  border-radius:999px;
+  background:#f2edf0;
+  overflow:hidden;
+  margin:12px 0 18px;
+}
+#capacityBarFill{
+  height:100%;
+  width:0%;
+  border-radius:999px;
+  background:var(--pink);
+  transition:width .3s ease;
+}
+.capacity-stats{margin-top:18px}
+.capacity-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin:18px 0;
+}
+.capacity-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+}
+.stat-line{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  border-bottom:1px solid var(--line);
+  padding:10px 0;
+}
+.stat-line:last-child{border-bottom:0}
+.big-file-row{
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid var(--pink-soft);
+  background:#fffafd;
+  border-radius:14px;
+  padding:12px;
+  margin:8px 0;
+  overflow-wrap:anywhere;
+}
+.library-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin:10px 0;
+}
+.file-size-note{
+  color:#888;
+  font-size:12px;
+  display:block;
+  margin-top:4px;
+}
+@media(max-width:900px){
+  .capacity-hero{display:block}
+  .capacity-ring{margin-top:14px}
+  .capacity-grid{grid-template-columns:1fr}
+  .big-file-row{grid-template-columns:1fr}
 }

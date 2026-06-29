@@ -1,9 +1,18 @@
-# MUST Resource Platform v4.2.1
+# MUST Resource Platform v4.3
 
-## 本版修正
-- 後台左上角「資源教室」可點擊回到學生公告首頁。
-- 版本號改放左下角，保留最後版本 v4.2.1，不再明顯顯示多個版本。
-- GitHub Token 說明更新：每位老師的瀏覽器都需設定一次 Token 才能拖曳上傳。
+資源教室公告管理平台。
 
-## Token 提醒
-GitHub Token 儲存在瀏覽器 localStorage，不會存在 Firebase，也不會自動同步到其他老師帳號。
+## v4.3 新功能
+- 新增「容量管理」頁面
+- GitHub Repository 容量顯示（需 GitHub Token）
+- 容量狀態：🟢正常 / 🟡注意 / 🔴快滿
+- 附件容量統計：圖片、PDF、Word、Excel、其他
+- 年度容量統計
+- 最大附件 Top 10
+- 附件中心可刪除單一附件
+- 附件中心可刪除某篇公告全部附件
+- 公告文字保留，只刪除附件與 GitHub 檔案
+- 左下角顯示版本與容量狀態
+
+## 注意
+刪除附件會永久刪除 GitHub 上的檔案，公告文字仍會保留。

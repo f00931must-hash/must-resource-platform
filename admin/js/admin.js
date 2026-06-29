@@ -1,10 +1,9 @@
-
 import { db, auth } from "../../shared/js/firebase-app.js";
 import { allowedAdmins, githubConfig } from "../../shared/js/firebase-config.js";
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-console.log("MUST Resource Platform Admin v4.2 loaded");
+console.log("MUST Resource Platform Admin v4.3 loaded");
 const $ = id => document.getElementById(id);
 const provider = new GoogleAuthProvider();
 let announcements = [], adminKeyword = "", uploadedImages = [], uploadedFiles = [], staffUsers = [], currentUser = null, currentRole = "guest";
@@ -123,7 +122,9 @@ document.addEventListener("click",async e=>{
   const delBtn=e.target.closest("[data-delete]"); if(delBtn){ if(!canManagePosts()) return alert("你的權限不能刪除公告。"); if(confirm("確定刪除這筆內容？")) await deleteDoc(doc(db,"announcements",delBtn.dataset.delete)); return; }
   const lineBtn=e.target.closest("[data-line]"); if(lineBtn) return copyLineText(lineBtn.dataset.line);
   const imgBtn=e.target.closest("[data-img]"); if(imgBtn){ uploadedImages.splice(Number(imgBtn.dataset.img),1); renderPreviews(); return; }
-  const fileBtn=e.target.closest("[data-file]"); if(fileBtn){ uploadedFiles.splice(Number(fileBtn.dataset.file),1); renderPreviews(); }
+  const fileBtn=e.target.closest("[data-file]"); if(fileBtn){ uploadedFiles.splice(Number(fileBtn.dataset.file),1); renderPreviews(); return; }
+  const delFile=e.target.closest("[data-delete-file]"); if(delFile){ const [postId,idx]=delFile.dataset.deleteFile.split("|"); return deleteAttachment(postId,idx); }
+  const delAll=e.target.closest("[data-delete-all-files]"); if(delAll){ return deleteAllAttachments(delAll.dataset.deleteAllFiles); }
 });
 
 let unsubscribe=null;
@@ -131,14 +132,14 @@ function listenPosts(){
   if(unsubscribe) return;
   unsubscribe=onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")),snap=>{
     announcements=snap.docs.map(d=>({id:d.id,...d.data()}));
-    updateStats(); renderList(); renderRecent(); renderLibrary();
+    updateStats(); renderList(); renderRecent(); renderLibrary(); renderCapacity();
   },err=>{ console.error(err); alert("讀取公告失敗：\n"+err.message); });
 }
 function showView(view){
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
   document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
   $("view-"+view)?.classList.remove("hidden");
-  $("pageTitle").textContent={dashboard:"儀表板",posts:"公告管理",library:"附件中心",settings:"系統設定"}[view]||"管理平台";
+  $("pageTitle").textContent={dashboard:"儀表板",posts:"公告管理",library:"附件中心",capacity:"容量管理",settings:"系統設定"}[view]||"管理平台";
   if(view==="settings") renderStaffList();
 }
 
@@ -176,6 +177,7 @@ function renderPreviews(){
   $("imagePreview").innerHTML=uploadedImages.map((x,i)=>`<div class="preview-item"><img src="../${x.url}"><div>${esc(x.name)}</div><button type="button" class="remove-mini" data-img="${i}">移除</button></div>`).join("");
   $("filePreview").innerHTML=uploadedFiles.map((x,i)=>`<div class="preview-item"><strong>📎 ${esc(x.name)}</strong><br><small>${Math.round((x.size||0)/1024)} KB</small><button type="button" class="remove-mini" data-file="${i}">移除</button></div>`).join("");
 }
+on("refreshCapacityBtn","click",renderCapacity);
 on("resetBtn","click",resetForm); on("previewBtn","click",showPreviewFromForm); on("lineBtn","click",copyLineTextFromForm);
 on("closePreviewBtn","click",()=>$("previewModal").classList.add("hidden")); on("closeAiBtn","click",()=>$("aiModal").classList.add("hidden"));
 on("applyAiBtn","click",()=>{ if($("aiResult").value.trim()) $("content").value=$("aiResult").value.trim(); $("aiModal").classList.add("hidden"); });
@@ -198,6 +200,149 @@ async function runAi(mode){
   }catch(e){ console.error(e); $("aiResult").value=`AI 呼叫失敗：${e.message}\n\n已改為提示詞模式，請複製以下內容到 ChatGPT：\n\n${prompt}`; }
 }
 function extractResponseText(json){ try{return json.output?.flatMap(item=>item.content||[])?.map(c=>c.text||"")?.join("\n")?.trim();}catch{return "";} }
+
+
+function formatBytes(bytes){
+  const n = Number(bytes || 0);
+  if(n >= 1024*1024*1024) return (n/1024/1024/1024).toFixed(2)+" GB";
+  if(n >= 1024*1024) return (n/1024/1024).toFixed(1)+" MB";
+  if(n >= 1024) return (n/1024).toFixed(1)+" KB";
+  return n+" B";
+}
+function fileKind(file){
+  const name = (file.name || file.url || "").toLowerCase();
+  const type = (file.type || "").toLowerCase();
+  if(type.startsWith("image/") || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(name)) return "圖片";
+  if(type.includes("pdf") || /\.pdf$/i.test(name)) return "PDF";
+  if(/\.(doc|docx)$/i.test(name)) return "Word";
+  if(/\.(xls|xlsx|csv)$/i.test(name)) return "Excel";
+  if(/\.(ppt|pptx)$/i.test(name)) return "PowerPoint";
+  return "其他";
+}
+function fileYear(file, post){
+  const url = file.url || "";
+  const m = url.match(/uploads\/(\d{4})\//);
+  if(m) return m[1];
+  return String(post.date || "").slice(0,4) || "未分類";
+}
+function allFiles(){
+  return announcements.flatMap(post => (post.files || []).map((file, index) => ({...file, postId:post.id, postTitle:post.title, postDate:post.date, index})));
+}
+function getCapacityStats(){
+  const files = allFiles();
+  const knownTotal = files.reduce((sum, f)=>sum + Number(f.size || 0), 0);
+  const byType = {};
+  const byYear = {};
+  for(const f of files){
+    const type = fileKind(f);
+    const year = fileYear(f, {date:f.postDate});
+    byType[type] = (byType[type] || 0) + Number(f.size || 0);
+    byYear[year] = (byYear[year] || 0) + Number(f.size || 0);
+  }
+  const sortedLargest = [...files].sort((a,b)=>Number(b.size||0)-Number(a.size||0)).slice(0,10);
+  return {files, knownTotal, byType, byYear, sortedLargest};
+}
+function capacityStatusByMb(mb){
+  if(mb >= 900) return {light:"🔴", text:"容量快滿", cls:"danger"};
+  if(mb >= 700) return {light:"🟡", text:"容量注意", cls:"warn"};
+  return {light:"🟢", text:"容量正常", cls:"ok"};
+}
+async function fetchRepoSizeMb(){
+  const token = localStorage.getItem("mrp_github_token") || "";
+  if(!token) return null;
+  const res = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`, {
+    headers:{Authorization:`Bearer ${token}`, Accept:"application/vnd.github+json"}
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.message || "GitHub API error");
+  return Number(data.size || 0) / 1024;
+}
+async function renderCapacity(){
+  const stats = getCapacityStats();
+  const files = stats.files;
+  if($("capPostCount")) $("capPostCount").textContent = announcements.length;
+  if($("capFileCount")) $("capFileCount").textContent = files.length;
+  if($("capKnownSize")) $("capKnownSize").textContent = formatBytes(stats.knownTotal);
+  if($("capLargestFile")) $("capLargestFile").textContent = stats.sortedLargest[0] ? formatBytes(stats.sortedLargest[0].size || 0) : "-";
+
+  if($("typeStats")){
+    const entries = Object.entries(stats.byType).sort((a,b)=>b[1]-a[1]);
+    $("typeStats").innerHTML = entries.length ? entries.map(([k,v])=>`<div class="stat-line"><span>${esc(k)}</span><strong>${formatBytes(v)}</strong></div>`).join("") : '<div class="empty">目前沒有附件</div>';
+  }
+  if($("yearStats")){
+    const entries = Object.entries(stats.byYear).sort((a,b)=>String(b[0]).localeCompare(String(a[0])));
+    $("yearStats").innerHTML = entries.length ? entries.map(([k,v])=>`<div class="stat-line"><span>${esc(k)}</span><strong>${formatBytes(v)}</strong></div>`).join("") : '<div class="empty">目前沒有附件</div>';
+  }
+  if($("largestFilesList")){
+    $("largestFilesList").innerHTML = stats.sortedLargest.length ? stats.sortedLargest.map(f=>`<div class="big-file-row"><div><strong>${esc(f.name)}</strong><span class="file-size-note">${esc(f.postTitle)}｜${esc(f.url)}</span></div><strong>${formatBytes(f.size||0)}</strong><button class="ghost-btn" data-delete-file="${esc(f.postId)}|${f.index}">刪除</button></div>`).join("") : '<div class="empty">目前沒有附件</div>';
+  }
+
+  let repoMb = null;
+  try{ repoMb = await fetchRepoSizeMb(); }catch(e){ console.warn(e); }
+  const displayMb = repoMb ?? (stats.knownTotal/1024/1024);
+  const percent = Math.min(100, Math.round(displayMb / 1000 * 100));
+  const status = capacityStatusByMb(displayMb);
+
+  if($("repoSizeText")) $("repoSizeText").textContent = `${displayMb.toFixed(1)} MB / 1000 MB`;
+  if($("repoStatusText")) $("repoStatusText").textContent = repoMb === null ? "未讀到 GitHub Repository 實際容量，目前顯示附件估算值。" : "GitHub Repository 實際容量。";
+  if($("repoPercentText")) $("repoPercentText").textContent = `${percent}%`;
+  if($("repoLightText")) $("repoLightText").textContent = status.light;
+  if($("capacityBarFill")) $("capacityBarFill").style.width = percent + "%";
+  if($("sidebarCapacityStatus")) $("sidebarCapacityStatus").innerHTML = `v4.3<br>${status.light} ${displayMb.toFixed(0)}MB`;
+}
+async function deleteGithubFileIfPossible(url){
+  if(!url || url.startsWith("http")) return;
+  const token = localStorage.getItem("mrp_github_token") || "";
+  if(!token) throw new Error("請先設定 GitHub Token，才能刪除附件檔案。");
+  const path = url.replace(/^(\.\.\/|\/)/, "");
+  const getRes = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${encodeURIComponent(path).replace(/%2F/g,"/")}?ref=${githubConfig.branch}`, {
+    headers:{Authorization:`Bearer ${token}`, Accept:"application/vnd.github+json"}
+  });
+  if(getRes.status === 404) return;
+  const meta = await getRes.json();
+  if(!getRes.ok) throw new Error(meta.message || "GitHub 讀取檔案失敗");
+  const delRes = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${encodeURIComponent(path).replace(/%2F/g,"/")}`, {
+    method:"DELETE",
+    headers:{Authorization:`Bearer ${token}`, Accept:"application/vnd.github+json", "Content-Type":"application/json"},
+    body:JSON.stringify({message:`delete attachment: ${path}`, sha:meta.sha, branch:githubConfig.branch})
+  });
+  const delData = await delRes.json();
+  if(!delRes.ok) throw new Error(delData.message || "GitHub 刪除檔案失敗");
+}
+async function deleteAttachment(postId, fileIndex){
+  const post = announcements.find(p=>p.id===postId);
+  if(!post) return alert("找不到公告。");
+  const files = [...(post.files || [])];
+  const file = files[Number(fileIndex)];
+  if(!file) return alert("找不到附件。");
+  if(!confirm(`確定刪除附件？\n\n${file.name}\n\n公告文字會保留，附件會永久刪除。`)) return;
+  try{
+    await deleteGithubFileIfPossible(file.url);
+    files.splice(Number(fileIndex),1);
+    await updateDoc(doc(db,"announcements",postId), {files, updatedAt:serverTimestamp()});
+    alert("附件已刪除，公告已保留。");
+  }catch(e){
+    console.error(e);
+    alert("刪除失敗：\n"+e.message);
+  }
+}
+async function deleteAllAttachments(postId){
+  const post = announcements.find(p=>p.id===postId);
+  if(!post) return alert("找不到公告。");
+  const files = [...(post.files || [])];
+  if(!files.length) return alert("這篇公告沒有附件。");
+  if(!confirm(`確定刪除這篇公告的全部附件？\n\n${post.title}\n\n共 ${files.length} 個附件。\n公告文字會保留。`)) return;
+  try{
+    for(const file of files){
+      await deleteGithubFileIfPossible(file.url);
+    }
+    await updateDoc(doc(db,"announcements",postId), {files:[], updatedAt:serverTimestamp()});
+    alert("這篇公告的附件已全部刪除，公告已保留。");
+  }catch(e){
+    console.error(e);
+    alert("刪除失敗：\n"+e.message);
+  }
+}
 
 function updateStats(){
   $("statTotal").textContent=announcements.length;
@@ -225,7 +370,7 @@ function cardHtml(a){
 function renderLibrary(){
   const groups=announcements.filter(a=>(a.files||[]).length);
   if(!groups.length){ $("libraryList").innerHTML='<div class="empty">目前沒有附件</div>'; return; }
-  $("libraryList").innerHTML=groups.map(a=>`<div class="library-group"><h3>${esc(a.title)}</h3><div class="library-meta">分類：${esc(a.category)}｜日期：${esc(a.date)}</div>${(a.files||[]).map(f=>`<a class="library-file" href="${normalizeLibraryUrl(f.url)}" target="_blank" rel="noopener"><span>📎</span><span>${esc(f.name)}<small>${esc(f.url)}</small></span></a>`).join("")}</div>`).join("");
+  $("libraryList").innerHTML=groups.map(a=>`<div class="library-group"><h3>${esc(a.title)}</h3><div class="library-meta">分類：${esc(a.category)}｜日期：${esc(a.date)}｜附件 ${(a.files||[]).length} 個</div><div class="library-actions"><button class="ghost-btn" data-delete-all-files="${a.id}">刪除本公告全部附件</button></div>${(a.files||[]).map((f,i)=>`<div class="library-file"><span>📎</span><span>${esc(f.name)}<small>${formatBytes(f.size||0)}｜${esc(f.url)}</small></span><button class="ghost-btn" data-delete-file="${a.id}|${i}">刪除</button></div>`).join("")}</div>`).join("");
 }
 function normalizeLibraryUrl(url){ if(!url) return "#"; if(url.startsWith("http")||url.startsWith("../")) return url; return "../"+url.replace(/^\//,""); }
 function editPost(id){
