@@ -1,15 +1,16 @@
-# MUST Resource Platform v3.0
+# MUST Resource Platform v3.1
 
 資源教室公告管理平台。
 
-## v3.0 新增
-- 後台可拖曳圖片
-- 後台可拖曳 PDF / Word / Excel / PPT / ZIP
-- 可直接貼圖片或附件網址
-- 可設定 GitHub Token
-- 檔案會上傳到 GitHub Repository 的 `frontend/assets/uploads/`
-- 公告資料仍存 Firestore
-- 不使用 Firebase Storage，不需要升級 Blaze
+## v3.1 新功能
+- 公告模板
+- 截止日期
+- NEW 標籤
+- 已截止公告前台自動隱藏
+- 發布前預覽
+- LINE 版本產生器
+- 圖片與附件拖曳上傳
 
-## 重要提醒
-GitHub Token 是免費的，但它等於鑰匙。請只建立 Fine-grained token，並只給這個 repo 的 Contents Read and write 權限。
+## 不需重新設定 Token
+若你已經在後台「系統設定」儲存 GitHub Token，更新檔案後不需要重新貼 Token。
+Token 存在瀏覽器 localStorage，不會因為上傳新版檔案消失。
