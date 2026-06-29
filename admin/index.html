@@ -52,6 +52,18 @@
           <div class="panel-head"><h2 id="formTitle">新增內容</h2><button type="button" id="resetBtn" class="ghost-btn">清空</button></div>
           <input type="hidden" id="editId">
 
+          <div class="ai-box">
+            <div class="ai-title">🤖 AI 公告助手</div>
+            <div class="tool-row">
+              <button type="button" class="ghost-btn ai-action" data-ai="formal">正式優化</button>
+              <button type="button" class="ghost-btn ai-action" data-ai="student">學生白話版</button>
+              <button type="button" class="ghost-btn ai-action" data-ai="line">LINE版</button>
+              <button type="button" class="ghost-btn ai-action" data-ai="short">500字內</button>
+              <button type="button" class="ghost-btn ai-action" data-ai="emoji">加 Emoji</button>
+            </div>
+            <p class="small-note">未設定 OpenAI API Key 時，會改成複製 ChatGPT 提示詞。</p>
+          </div>
+
           <label>公告模板</label>
           <select id="templateSelect" class="field">
             <option value="">不套用模板</option>
@@ -71,7 +83,7 @@
 
           <div class="two-col">
             <div><label>截止日期（可空白）</label><input id="deadline" type="date" class="field"></div>
-            <div><label>快速工具</label><div class="tool-row"><button type="button" id="previewBtn" class="ghost-btn">👁 發布前預覽</button><button type="button" id="lineBtn" class="ghost-btn">📱 產生 LINE 版本</button></div></div>
+            <div><label>快速工具</label><div class="tool-row"><button type="button" id="previewBtn" class="ghost-btn">👁 發布前預覽</button><button type="button" id="lineBtn" class="ghost-btn">📱 複製 LINE 版本</button></div></div>
           </div>
 
           <div class="two-col">
@@ -102,16 +114,34 @@
       </section>
     </section>
 
-    <section id="view-library" class="view hidden"><section class="panel"><h2>📁 附件中心</h2><div id="libraryList"></div></section></section>
+    <section id="view-library" class="view hidden">
+      <section class="panel">
+        <h2>📁 附件中心</h2>
+        <div id="libraryList" class="library-list"></div>
+      </section>
+    </section>
 
     <section id="view-settings" class="view hidden">
       <section class="panel">
         <h2>⚙ 系統設定</h2>
+
+        <h3>GitHub Token</h3>
         <p>GitHub Token 只存在此瀏覽器，用於拖曳上傳檔案到 Repository。</p>
         <label>GitHub Token</label>
         <input id="githubToken" class="field" type="password" placeholder="貼上 fine-grained token">
         <button id="saveTokenBtn" class="primary-btn">儲存 Token</button>
         <button id="clearTokenBtn" class="ghost-btn">清除 Token</button>
+
+        <hr class="soft-line">
+
+        <h3>OpenAI API Key（AI 助手，可不填）</h3>
+        <p>若不填，AI 按鈕會改成複製提示詞到 ChatGPT。若填入，會直接呼叫 OpenAI API，可能產生 API 費用。</p>
+        <label>OpenAI API Key</label>
+        <input id="openaiKey" class="field" type="password" placeholder="sk-...">
+        <label>模型</label>
+        <input id="openaiModel" class="field" placeholder="gpt-5.5">
+        <button id="saveOpenAiBtn" class="primary-btn">儲存 AI 設定</button>
+        <button id="clearOpenAiBtn" class="ghost-btn">清除 AI 設定</button>
       </section>
     </section>
   </main>
@@ -121,6 +151,18 @@
   <div class="admin-modal-card">
     <button type="button" id="closePreviewBtn" class="modal-close">×</button>
     <div id="previewContent"></div>
+  </div>
+</div>
+
+<div id="aiModal" class="admin-modal hidden">
+  <div class="admin-modal-card">
+    <button type="button" id="closeAiBtn" class="modal-close">×</button>
+    <h2>🤖 AI 產生結果</h2>
+    <textarea id="aiResult" class="field ai-result"></textarea>
+    <div class="tool-row">
+      <button type="button" id="applyAiBtn" class="primary-btn">套用到公告內容</button>
+      <button type="button" id="copyAiBtn" class="ghost-btn">複製文字</button>
+    </div>
   </div>
 </div>
 

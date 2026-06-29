@@ -10,6 +10,7 @@ let announcements = [];
 let adminKeyword = "";
 let uploadedImages = [];
 let uploadedFiles = [];
+let lastAiText = "";
 
 const templates = {
   activity: {
@@ -28,6 +29,14 @@ const templates = {
     category: "公告",
     content: "📢【公告】\n\n說明：\n辦理方式：\n注意事項：\n聯絡窗口："
   }
+};
+
+const aiPrompts = {
+  formal: "請將以下公告內容改寫成正式、清楚、適合大學資源教室發布的公告。保留重要日期、地點、資格、附件資訊。請使用繁體中文。",
+  student: "請將以下公告內容改寫成學生容易理解的白話版，語氣親切清楚，重要事項用條列呈現。請使用繁體中文。",
+  line: "請將以下公告內容改寫成適合 LINE 官方帳號發布的版本，精簡、有 emoji、重點清楚。請使用繁體中文。",
+  short: "請將以下公告內容濃縮成 500 字以內，保留最重要的日期、對象、方式、附件或連結。請使用繁體中文。",
+  emoji: "請將以下公告內容整理得更容易閱讀，加入適量 emoji，但不要太花俏。請使用繁體中文。"
 };
 
 $("loginBtn").onclick = async () => {
@@ -63,6 +72,8 @@ onAuthStateChanged(auth, (user) => {
   $("appView").classList.remove("hidden");
   $("userInfo").textContent = user.email;
   $("githubToken").value = localStorage.getItem("mrp_github_token") || "";
+  $("openaiKey").value = localStorage.getItem("mrp_openai_key") || "";
+  $("openaiModel").value = localStorage.getItem("mrp_openai_model") || "gpt-5.5";
   resetForm();
   listenPosts();
 });
@@ -111,6 +122,20 @@ $("clearTokenBtn").onclick = () => {
   localStorage.removeItem("mrp_github_token");
   $("githubToken").value = "";
   alert("已清除 Token");
+};
+
+$("saveOpenAiBtn").onclick = () => {
+  localStorage.setItem("mrp_openai_key", $("openaiKey").value.trim());
+  localStorage.setItem("mrp_openai_model", $("openaiModel").value.trim() || "gpt-5.5");
+  alert("AI 設定已儲存於此瀏覽器");
+};
+
+$("clearOpenAiBtn").onclick = () => {
+  localStorage.removeItem("mrp_openai_key");
+  localStorage.removeItem("mrp_openai_model");
+  $("openaiKey").value = "";
+  $("openaiModel").value = "gpt-5.5";
+  alert("已清除 AI 設定");
 };
 
 setupDrop("imageDrop", "imageInput", "image");
@@ -254,6 +279,85 @@ $("templateSelect").onchange = (e) => {
 $("previewBtn").onclick = () => showPreviewFromForm();
 $("lineBtn").onclick = () => copyLineTextFromForm();
 $("closePreviewBtn").onclick = () => $("previewModal").classList.add("hidden");
+$("closeAiBtn").onclick = () => $("aiModal").classList.add("hidden");
+$("applyAiBtn").onclick = () => {
+  if ($("aiResult").value.trim()) $("content").value = $("aiResult").value.trim();
+  $("aiModal").classList.add("hidden");
+};
+$("copyAiBtn").onclick = async () => {
+  await navigator.clipboard.writeText($("aiResult").value);
+  alert("已複製");
+};
+
+document.querySelectorAll(".ai-action").forEach((btn) => {
+  btn.onclick = () => runAi(btn.dataset.ai);
+});
+
+async function runAi(mode) {
+  const data = currentFormData();
+  const instruction = aiPrompts[mode] || aiPrompts.formal;
+  const source = `標題：${data.title}\n分類：${data.category}\n發布日期：${data.date}\n截止日期：${data.deadline || "無"}\n\n內容：\n${data.content}`;
+
+  if (!data.content.trim() && !data.title.trim()) {
+    alert("請先輸入標題或公告內容，再使用 AI。");
+    return;
+  }
+
+  const apiKey = localStorage.getItem("mrp_openai_key") || "";
+  const model = localStorage.getItem("mrp_openai_model") || "gpt-5.5";
+
+  const prompt = `${instruction}\n\n${source}`;
+
+  if (!apiKey) {
+    $("aiResult").value = `請幫我處理以下資源教室公告。\n\n需求：${instruction}\n\n公告內容：\n${source}`;
+    $("aiModal").classList.remove("hidden");
+    await navigator.clipboard.writeText($("aiResult").value);
+    alert("尚未設定 OpenAI API Key，已改為複製 ChatGPT 提示詞。");
+    return;
+  }
+
+  try {
+    $("aiResult").value = "AI 產生中，請稍候...";
+    $("aiModal").classList.remove("hidden");
+
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        input: prompt
+      })
+    });
+
+    const json = await response.json();
+
+    if (!response.ok) {
+      throw new Error(json.error?.message || "OpenAI API error");
+    }
+
+    const text = json.output_text || extractResponseText(json) || "AI 沒有回傳文字。";
+    lastAiText = text;
+    $("aiResult").value = text;
+  } catch (e) {
+    console.error(e);
+    $("aiResult").value = `AI 呼叫失敗：${e.message}\n\n已改為提示詞模式，請複製以下內容到 ChatGPT：\n\n${prompt}`;
+  }
+}
+
+function extractResponseText(json) {
+  try {
+    return json.output
+      ?.flatMap((item) => item.content || [])
+      ?.map((c) => c.text || "")
+      ?.join("\n")
+      ?.trim();
+  } catch {
+    return "";
+  }
+}
 
 function updateStats() {
   $("statTotal").textContent = announcements.length;
@@ -366,11 +470,31 @@ function bindCardButtons() {
 }
 
 function renderLibrary() {
-  const files = announcements.flatMap((a) => (a.files || []).map((f) => ({ ...f, postTitle: a.title, date: a.date })));
+  const groups = announcements.filter((a) => (a.files || []).length);
 
-  $("libraryList").innerHTML = files.length
-    ? files.map((f) => `<a class="field" href="../${f.url}" target="_blank">📎 ${escapeHtml(f.name)}<br><small>來源：${escapeHtml(f.postTitle)}</small></a>`).join("<br>")
-    : '<div class="empty">目前沒有附件</div>';
+  if (!groups.length) {
+    $("libraryList").innerHTML = '<div class="empty">目前沒有附件</div>';
+    return;
+  }
+
+  $("libraryList").innerHTML = groups.map((a) => `
+    <div class="library-group">
+      <h3>${escapeHtml(a.title)}</h3>
+      <div class="library-meta">分類：${escapeHtml(a.category)}｜日期：${escapeHtml(a.date)}</div>
+      ${(a.files || []).map((f) => `
+        <a class="library-file" href="${normalizeLibraryUrl(f.url)}" target="_blank" rel="noopener">
+          <span>📎</span>
+          <span>${escapeHtml(f.name)}<small>${escapeHtml(f.url)}</small></span>
+        </a>
+      `).join("")}
+    </div>
+  `).join("");
+}
+
+function normalizeLibraryUrl(url) {
+  if (!url) return "#";
+  if (url.startsWith("http") || url.startsWith("../")) return url;
+  return "../" + url.replace(/^\//, "");
 }
 
 function editPost(id) {
