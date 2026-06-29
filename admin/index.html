@@ -20,14 +20,13 @@
 
 <div id="appView" class="admin-shell hidden">
   <aside class="sidebar">
-    <div class="brand"><div class="logo small-logo">M</div><div><strong>資源教室</strong><span>管理平台</span></div></div>
+    <a class="brand brand-link" href="../frontend/" title="回到公告首頁"><div class="logo small-logo">M</div><div><strong>資源教室</strong><span>管理平台</span></div></a>
     <nav>
       <button class="nav-item active" data-view="dashboard">🏠 儀表板</button>
       <button class="nav-item" data-view="posts">📢 公告管理</button>
       <button class="nav-item" data-view="library">📁 附件中心</button>
       <button class="nav-item" data-view="settings">⚙ 系統設定</button>
-    </nav>
-    <div class="version-pill">v4.1</div><div class="version-pill">v4.2</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
+    </nav><div class="version-bottom">v4.2.1</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
   </aside>
 
   <main class="dashboard">
@@ -128,7 +127,7 @@
         <h2>⚙ 系統設定</h2>
 
         <h3>GitHub Token</h3>
-        <p>GitHub Token 只存在此瀏覽器，用於拖曳上傳檔案到 Repository。</p>
+        <p>GitHub Token 只存在此瀏覽器，用於拖曳上傳檔案到 Repository。每位老師自己的瀏覽器都要設定一次 Token，才可以拖曳上傳圖片或附件。</p>
         <label>GitHub Token</label>
         <input id="githubToken" class="field" type="password" placeholder="貼上 fine-grained token">
         <button id="saveTokenBtn" class="primary-btn">儲存 Token</button>
