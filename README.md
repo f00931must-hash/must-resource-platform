@@ -16,3 +16,9 @@
 
 ## 注意
 刪除附件會永久刪除 GitHub 上的檔案，公告文字仍會保留。
+
+
+## v5.0 Portal 權限整合
+- 公告平台仍使用自己的 Firebase Google 登入與 Firestore 安全規則。
+- 老師名單改由 Portal 的「同步公告權限」寫入本專案 `settings/admins`。
+- 公告後台不再提供老師管理介面。

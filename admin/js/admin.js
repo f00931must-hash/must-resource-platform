@@ -1,12 +1,13 @@
 import { db, auth } from "../../shared/js/firebase-app.js";
-import { githubConfig } from "../../shared/js/firebase-config.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import { signInThroughPortal, ensurePortalAccess, signOutEverywhere } from "../../shared/js/portal-auth.js";
+import { allowedAdmins, githubConfig } from "../../shared/js/firebase-config.js";
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-console.log("MUST Resource Platform Admin v5.0 Portal Access loaded");
+console.log("MUST Resource Platform Admin v5.0 loaded");
 const $ = id => document.getElementById(id);
-let announcements = [], adminKeyword = "", uploadedImages = [], uploadedFiles = [], currentUser = null, portalProfile = null, currentRole = "guest";
+const provider = new GoogleAuthProvider();
+let announcements = [], adminKeyword = "", uploadedImages = [], uploadedFiles = [], staffUsers = [], currentUser = null, currentRole = "guest";
+const builtInSuperAdmins = (allowedAdmins || []).map(normalizeEmail);
 
 const templates = {
   activity: { category:"活動", content:"📢【活動通知】\n\n活動名稱：\n活動日期：\n活動地點：\n參加對象：\n報名方式：\n注意事項：\n聯絡窗口：" },
@@ -30,57 +31,101 @@ function canAssistantDraft(){ return currentRole === "assistant"; }
 function on(id, ev, fn){ const el=$(id); if(el) el.addEventListener(ev, fn); }
 
 on("loginBtn","click",async()=>{
-  try{
-    $("loginBtn").disabled=true;
-    $("loginBtn").textContent="驗證入口權限中...";
-    await signInThroughPortal();
-  }catch(e){
-    console.error(e);
-    const message=e.message||e.code||"登入失敗";
-    const card=document.querySelector(".login-card");
-    let denied=$("permissionDenied");
-    if(!denied){ denied=document.createElement("div"); denied.id="permissionDenied"; denied.className="permission-denied"; card?.appendChild(denied); }
-    denied.textContent=message;
-    await signOutEverywhere();
-  }finally{
-    $("loginBtn").disabled=false;
-    $("loginBtn").textContent="使用 Google 登入";
-  }
+  try{ $("loginBtn").disabled=true; $("loginBtn").textContent="登入中..."; await signInWithPopup(auth,provider); }
+  catch(e){ console.error(e); alert("Google 登入失敗：\n"+(e.message||e.code)); }
+  finally{ $("loginBtn").disabled=false; $("loginBtn").textContent="使用 Google 登入"; }
 });
-on("logoutBtn","click",()=>signOutEverywhere());
+on("logoutBtn","click",()=>signOut(auth));
 
 onAuthStateChanged(auth, async user=>{
-  if(!user){
-    currentUser=null; portalProfile=null; currentRole="guest";
-    $("loginView")?.classList.remove("hidden");
-    $("appView")?.classList.add("hidden");
-    return;
-  }
-  try{
-    currentUser=user;
-    portalProfile=await ensurePortalAccess(user);
-    currentRole=portalProfile.role==="admin" ? "superAdmin" : "teacher";
-    $("loginView")?.classList.add("hidden");
-    $("appView")?.classList.remove("hidden");
-    $("permissionDenied")?.remove();
-    const displayName=portalProfile.displayName || user.displayName || user.email;
-    $("userInfo").innerHTML=`👤 ${esc(displayName)} <span class="role-badge">${roleLabel(currentRole)}</span>`;
-    if($("githubToken")) $("githubToken").value=localStorage.getItem("mrp_github_token")||"";
-    if($("openaiKey")) $("openaiKey").value=localStorage.getItem("mrp_openai_key")||"";
-    if($("openaiModel")) $("openaiModel").value=localStorage.getItem("mrp_openai_model")||"gpt-5.5";
-    applyRoleUi(); resetForm(); listenPosts();
-  }catch(e){
-    console.error(e);
-    alert(e.message||"入口權限驗證失敗");
-    await signOutEverywhere();
-  }
+  if(!user){ $("loginView")?.classList.remove("hidden"); $("appView")?.classList.add("hidden"); return; }
+  currentUser=user;
+  await loadStaffUsers();
+  currentRole=getRoleByEmail(user.email);
+  if(currentRole==="guest"){ alert("這個帳號沒有後台權限："+user.email); signOut(auth); return; }
+  $("loginView")?.classList.add("hidden"); $("appView")?.classList.remove("hidden");
+  const rec=findStaffByEmail(user.email);
+  $("userInfo").innerHTML=`👤 ${esc(rec?.name || user.displayName || user.email)} <span class="role-badge">${roleLabel(currentRole)}</span>`;
+  if($("githubToken")) $("githubToken").value=localStorage.getItem("mrp_github_token")||"";
+  if($("openaiKey")) $("openaiKey").value=localStorage.getItem("mrp_openai_key")||"";
+  if($("openaiModel")) $("openaiModel").value=localStorage.getItem("mrp_openai_model")||"gpt-5.5";
+  applyRoleUi(); resetForm(); listenPosts();
 });
 
-function applyRoleUi(){
-  $("published").disabled=false;
-  $("pinned").disabled=false;
-  $("assistantHint")?.classList.add("hidden");
+async function loadStaffUsers(){
+  const ref=doc(db,"settings","admins");
+  const snap=await getDoc(ref);
+  staffUsers=snap.exists() ? (snap.data().users || []) : [];
+  for(const email of builtInSuperAdmins){
+    if(!staffUsers.some(u=>normalizeEmail(u.email)===email)){
+      staffUsers.push({name:"最高管理員", email, role:"superAdmin", builtIn:true});
+    }
+  }
+  // 權限由 Portal 同步，不在公告平台自動覆寫名單。
+  renderStaffList();
 }
+async function saveStaffUsers(showAlert=true){
+  const normalized=[], seen=new Set();
+  for(const u of staffUsers){
+    const email=normalizeEmail(u.email);
+    if(!email || seen.has(email)) continue;
+    seen.add(email);
+    normalized.push({name:u.name||email, email, role:builtInSuperAdmins.includes(email)?"superAdmin":(u.role||"teacher"), builtIn:builtInSuperAdmins.includes(email)});
+  }
+  staffUsers=normalized;
+  await setDoc(doc(db,"settings","admins"),{
+    users:staffUsers,
+    superAdmins:staffUsers.filter(u=>u.role==="superAdmin").map(u=>normalizeEmail(u.email)),
+    teachers:staffUsers.filter(u=>u.role==="teacher").map(u=>normalizeEmail(u.email)),
+    assistants:staffUsers.filter(u=>u.role==="assistant").map(u=>normalizeEmail(u.email)),
+    updatedAt:serverTimestamp()
+  },{merge:true});
+  renderStaffList();
+  if(showAlert) alert("管理員名單已更新。");
+}
+function findStaffByEmail(email){ const t=normalizeEmail(email); return staffUsers.find(u=>normalizeEmail(u.email)===t); }
+function getRoleByEmail(email){ const t=normalizeEmail(email); if(builtInSuperAdmins.includes(t)) return "superAdmin"; return findStaffByEmail(t)?.role || "guest"; }
+function applyRoleUi(){
+  $("roleManager")?.classList.toggle("hidden",!isSuperAdmin());
+  $("roleManagerLocked")?.classList.toggle("hidden",isSuperAdmin());
+  if(canAssistantDraft()){
+    $("published").checked=false; $("published").disabled=true; $("pinned").checked=false; $("pinned").disabled=true; $("assistantHint")?.classList.remove("hidden");
+  }else{
+    $("published").disabled=false; $("pinned").disabled=false; $("assistantHint")?.classList.add("hidden");
+  }
+}
+function renderStaffList(){
+  const el=$("staffList"); if(!el) return;
+  if(!staffUsers.length){ el.innerHTML='<div class="empty">尚未建立管理員名單</div>'; return; }
+  el.innerHTML=staffUsers.map(u=>{
+    const email=normalizeEmail(u.email), built=builtInSuperAdmins.includes(email);
+    return `<div class="staff-card"><div class="staff-main"><div class="staff-name">${esc(u.name||email)} <span class="role-badge">${roleLabel(u.role)}</span>${built?'<span class="role-badge">內建</span>':""}</div><div class="staff-email">${esc(email)}</div></div><div class="tool-row"><button type="button" class="ghost-btn" data-edit-staff="${esc(email)}">帶入修改</button>${built?"":`<button type="button" class="ghost-btn" data-remove-staff="${esc(email)}">移除</button>`}</div></div>`;
+  }).join("");
+}
+on("addStaffBtn","click",async()=>{
+  if(!isSuperAdmin()) return alert("只有超級管理員可以新增老師。");
+  const name=$("staffName").value.trim(), email=normalizeEmail($("staffEmail").value), role=$("staffRole").value;
+  if(!email || !email.includes("@")) return alert("請輸入正確 Email。");
+  const existing=staffUsers.find(u=>normalizeEmail(u.email)===email);
+  if(existing){ existing.name=name||existing.name||email; existing.role=builtInSuperAdmins.includes(email)?"superAdmin":role; }
+  else staffUsers.push({name:name||email,email,role});
+  $("staffName").value=""; $("staffEmail").value=""; $("staffRole").value="teacher";
+  await saveStaffUsers(true);
+});
+
+document.addEventListener("click",async e=>{
+  const nav=e.target.closest(".nav-item"); if(nav) return showView(nav.dataset.view);
+  const aiBtn=e.target.closest(".ai-action"); if(aiBtn) return runAi(aiBtn.dataset.ai);
+  const editStaff=e.target.closest("[data-edit-staff]"); if(editStaff){ const u=findStaffByEmail(editStaff.dataset.editStaff); if(u){ $("staffName").value=u.name||""; $("staffEmail").value=normalizeEmail(u.email); $("staffRole").value=u.role||"teacher"; } return; }
+  const removeStaff=e.target.closest("[data-remove-staff]"); if(removeStaff){ if(!isSuperAdmin()) return alert("只有超級管理員可以移除老師。"); const email=normalizeEmail(removeStaff.dataset.removeStaff); if(builtInSuperAdmins.includes(email)) return alert("內建最高管理員不可移除。"); if(!confirm("確定移除這位人員？\n"+email)) return; staffUsers=staffUsers.filter(u=>normalizeEmail(u.email)!==email); await saveStaffUsers(true); return; }
+  const editBtn=e.target.closest("[data-edit]"); if(editBtn) return editPost(editBtn.dataset.edit);
+  const delBtn=e.target.closest("[data-delete]"); if(delBtn){ if(!canManagePosts()) return alert("你的權限不能刪除公告。"); if(confirm("確定刪除這筆內容？")) await deleteDoc(doc(db,"announcements",delBtn.dataset.delete)); return; }
+  const lineBtn=e.target.closest("[data-line]"); if(lineBtn) return copyLineText(lineBtn.dataset.line);
+  const imgBtn=e.target.closest("[data-img]"); if(imgBtn){ uploadedImages.splice(Number(imgBtn.dataset.img),1); renderPreviews(); return; }
+  const fileBtn=e.target.closest("[data-file]"); if(fileBtn){ uploadedFiles.splice(Number(fileBtn.dataset.file),1); renderPreviews(); return; }
+  const delFile=e.target.closest("[data-delete-file]"); if(delFile){ const [postId,idx]=delFile.dataset.deleteFile.split("|"); return deleteAttachment(postId,idx); }
+  const delAll=e.target.closest("[data-delete-all-files]"); if(delAll){ return deleteAllAttachments(delAll.dataset.deleteAllFiles); }
+});
 
 let unsubscribe=null;
 function listenPosts(){
@@ -95,6 +140,7 @@ function showView(view){
   document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
   $("view-"+view)?.classList.remove("hidden");
   $("pageTitle").textContent={dashboard:"儀表板",posts:"公告管理",library:"附件中心",capacity:"容量管理",settings:"系統設定"}[view]||"管理平台";
+  if(view==="settings") renderStaffList();
 }
 
 on("saveTokenBtn","click",()=>{ localStorage.setItem("mrp_github_token",$("githubToken").value.trim()); alert("Token 已儲存於此瀏覽器"); });
@@ -242,7 +288,7 @@ async function renderCapacity(){
   if($("repoPercentText")) $("repoPercentText").textContent = `${percent}%`;
   if($("repoLightText")) $("repoLightText").textContent = status.light;
   if($("capacityBarFill")) $("capacityBarFill").style.width = percent + "%";
-  if($("sidebarCapacityStatus")) $("sidebarCapacityStatus").innerHTML = `v5.0<br>${status.light} ${displayMb.toFixed(0)}MB`;
+  if($("sidebarCapacityStatus")) $("sidebarCapacityStatus").innerHTML = `v4.3<br>${status.light} ${displayMb.toFixed(0)}MB`;
 }
 async function deleteGithubFileIfPossible(url){
   if(!url || url.startsWith("http")) return;
