@@ -11,8 +11,7 @@ export const allowedAdmins = [
   "master004400@gmail.com"
 ];
 
-export const githubConfig = {
-  owner: "f00931must-hash",
-  repo: "must-resource-platform",
-  branch: "main"
+export const uploadServiceConfig = {
+  baseUrl: "https://must-free-upload-service.f00931-must.workers.dev",
+  system: "announcement"
 };

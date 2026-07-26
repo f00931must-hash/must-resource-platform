@@ -1,3 +1,10 @@
+## v5.1
+- 圖片及附件改由 Cloudflare 共用上傳服務處理。
+- 移除每台電腦設定 GitHub Token 的功能。
+- 老師與助理皆可使用 Firebase 登入身分上傳。
+- 新檔案存放於 must-resource-assets Repository。
+- 容量管理改由共用上傳服務讀取。
+
 # CHANGELOG
 
 ## v5.0

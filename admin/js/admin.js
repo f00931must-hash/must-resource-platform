@@ -1,9 +1,9 @@
 import { db, auth } from "../../shared/js/firebase-app.js";
-import { allowedAdmins, githubConfig } from "../../shared/js/firebase-config.js";
+import { allowedAdmins, uploadServiceConfig } from "../../shared/js/firebase-config.js";
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-console.log("MUST Resource Platform Admin v5.0 loaded");
+console.log("MUST Resource Platform Admin v5.1 loaded");
 const $ = id => document.getElementById(id);
 const provider = new GoogleAuthProvider();
 let announcements = [], adminKeyword = "", uploadedImages = [], uploadedFiles = [], staffUsers = [], currentUser = null, currentRole = "guest";
@@ -46,7 +46,6 @@ onAuthStateChanged(auth, async user=>{
   $("loginView")?.classList.add("hidden"); $("appView")?.classList.remove("hidden");
   const rec=findStaffByEmail(user.email);
   $("userInfo").innerHTML=`👤 ${esc(rec?.name || user.displayName || user.email)} <span class="role-badge">${roleLabel(currentRole)}</span>`;
-  if($("githubToken")) $("githubToken").value=localStorage.getItem("mrp_github_token")||"";
   if($("openaiKey")) $("openaiKey").value=localStorage.getItem("mrp_openai_key")||"";
   if($("openaiModel")) $("openaiModel").value=localStorage.getItem("mrp_openai_model")||"gpt-5.5";
   applyRoleUi(); resetForm(); listenPosts();
@@ -143,8 +142,6 @@ function showView(view){
   if(view==="settings") renderStaffList();
 }
 
-on("saveTokenBtn","click",()=>{ localStorage.setItem("mrp_github_token",$("githubToken").value.trim()); alert("Token 已儲存於此瀏覽器"); });
-on("clearTokenBtn","click",()=>{ localStorage.removeItem("mrp_github_token"); $("githubToken").value=""; alert("已清除 Token"); });
 on("saveOpenAiBtn","click",()=>{ localStorage.setItem("mrp_openai_key",$("openaiKey").value.trim()); localStorage.setItem("mrp_openai_model",$("openaiModel").value.trim()||"gpt-5.5"); alert("AI 設定已儲存於此瀏覽器"); });
 on("clearOpenAiBtn","click",()=>{ localStorage.removeItem("mrp_openai_key"); localStorage.removeItem("mrp_openai_model"); $("openaiKey").value=""; $("openaiModel").value="gpt-5.5"; alert("已清除 AI 設定"); });
 
@@ -157,24 +154,47 @@ function setupDrop(zoneId,inputId,type){
   zone.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("dragover");handleFiles([...e.dataTransfer.files],type);});
   input.addEventListener("change",()=>handleFiles([...input.files],type));
 }
+async function uploadServiceRequest(path, options={}){
+  if(!currentUser) throw new Error("請先登入後台。");
+  const token=await currentUser.getIdToken(true);
+  const response=await fetch(`${uploadServiceConfig.baseUrl.replace(/\/$/,"")}${path}`,{
+    ...options,
+    headers:{Authorization:`Bearer ${token}`,...(options.headers||{})}
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok || data.ok===false) throw new Error(data.error||`上傳服務錯誤（${response.status}）`);
+  return data;
+}
 async function handleFiles(files,type){
-  const token=localStorage.getItem("mrp_github_token");
-  if(!token) return alert("請先到「系統設定」貼上 GitHub Token，才能拖曳上傳檔案。");
-  for(const file of files){ try{ const item=await uploadToGithub(file,token,type); if(type==="image") uploadedImages.push(item); else uploadedFiles.push(item); }catch(e){ console.error(e); alert("上傳失敗："+file.name+"\n"+e.message); } }
+  if(!files.length) return;
+  for(const file of files){
+    try{
+      const form=new FormData();
+      form.append("file",file);
+      form.append("system",uploadServiceConfig.system||"announcement");
+      form.append("category",type==="image"?"images":"attachments");
+      form.append("referenceId",$("editId")?.value||"new-post");
+      const result=await uploadServiceRequest("/upload",{method:"POST",body:form});
+      const item={
+        name:file.name,
+        url:result.file.url,
+        path:result.file.path,
+        sha:result.file.sha,
+        size:result.file.size,
+        type:result.file.mimeType,
+        uploadedBy:result.file.uploadedBy,
+        uploadedAt:result.file.uploadedAt
+      };
+      if(type==="image") uploadedImages.push(item); else uploadedFiles.push(item);
+    }catch(e){
+      console.error(e);
+      alert("上傳失敗："+file.name+"\n"+e.message);
+    }
+  }
   renderPreviews();
 }
-function fileToBase64(file){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(String(r.result).split(",")[1]); r.onerror=reject; r.readAsDataURL(file); }); }
-async function uploadToGithub(file,token,type){
-  const safeName=file.name.replace(/[^\w.\-\u4e00-\u9fa5]/g,"_");
-  const now=new Date(), yyyy=now.getFullYear(), mm=String(now.getMonth()+1).padStart(2,"0");
-  const path=`frontend/assets/uploads/${yyyy}/${mm}/${Date.now()}_${safeName}`;
-  const content=await fileToBase64(file);
-  const response=await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${path}`,{method:"PUT",headers:{Authorization:`Bearer ${token}`,Accept:"application/vnd.github+json","Content-Type":"application/json"},body:JSON.stringify({message:`upload ${type}: ${file.name}`,content,branch:githubConfig.branch})});
-  const data=await response.json(); if(!response.ok) throw new Error(data.message||"GitHub API error");
-  return {name:file.name,url:path,size:file.size,type:file.type};
-}
 function renderPreviews(){
-  $("imagePreview").innerHTML=uploadedImages.map((x,i)=>`<div class="preview-item"><img src="../${x.url}"><div>${esc(x.name)}</div><button type="button" class="remove-mini" data-img="${i}">移除</button></div>`).join("");
+  $("imagePreview").innerHTML=uploadedImages.map((x,i)=>`<div class="preview-item"><img src="${normalizePreviewUrl(x.url)}"><div>${esc(x.name)}</div><button type="button" class="remove-mini" data-img="${i}">移除</button></div>`).join("");
   $("filePreview").innerHTML=uploadedFiles.map((x,i)=>`<div class="preview-item"><strong>📎 ${esc(x.name)}</strong><br><small>${Math.round((x.size||0)/1024)} KB</small><button type="button" class="remove-mini" data-file="${i}">移除</button></div>`).join("");
 }
 on("refreshCapacityBtn","click",renderCapacity);
@@ -248,14 +268,8 @@ function capacityStatusByMb(mb){
   return {light:"🟢", text:"容量正常", cls:"ok"};
 }
 async function fetchRepoSizeMb(){
-  const token = localStorage.getItem("mrp_github_token") || "";
-  if(!token) return null;
-  const res = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`, {
-    headers:{Authorization:`Bearer ${token}`, Accept:"application/vnd.github+json"}
-  });
-  const data = await res.json();
-  if(!res.ok) throw new Error(data.message || "GitHub API error");
-  return Number(data.size || 0) / 1024;
+  const data=await uploadServiceRequest("/repo-stats");
+  return Number(data.sizeMb||0);
 }
 async function renderCapacity(){
   const stats = getCapacityStats();
@@ -288,26 +302,17 @@ async function renderCapacity(){
   if($("repoPercentText")) $("repoPercentText").textContent = `${percent}%`;
   if($("repoLightText")) $("repoLightText").textContent = status.light;
   if($("capacityBarFill")) $("capacityBarFill").style.width = percent + "%";
-  if($("sidebarCapacityStatus")) $("sidebarCapacityStatus").innerHTML = `v4.3<br>${status.light} ${displayMb.toFixed(0)}MB`;
+  if($("sidebarCapacityStatus")) $("sidebarCapacityStatus").innerHTML = `v5.1<br>${status.light} ${displayMb.toFixed(0)}MB`;
 }
-async function deleteGithubFileIfPossible(url){
-  if(!url || url.startsWith("http")) return;
-  const token = localStorage.getItem("mrp_github_token") || "";
-  if(!token) throw new Error("請先設定 GitHub Token，才能刪除附件檔案。");
-  const path = url.replace(/^(\.\.\/|\/)/, "");
-  const getRes = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${encodeURIComponent(path).replace(/%2F/g,"/")}?ref=${githubConfig.branch}`, {
-    headers:{Authorization:`Bearer ${token}`, Accept:"application/vnd.github+json"}
+async function deleteGithubFileIfPossible(file){
+  const path=file?.path || "";
+  if(!path || !path.startsWith("uploads/")) return {legacy:true};
+  await uploadServiceRequest("/delete",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({path,sha:file.sha||""})
   });
-  if(getRes.status === 404) return;
-  const meta = await getRes.json();
-  if(!getRes.ok) throw new Error(meta.message || "GitHub 讀取檔案失敗");
-  const delRes = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${encodeURIComponent(path).replace(/%2F/g,"/")}`, {
-    method:"DELETE",
-    headers:{Authorization:`Bearer ${token}`, Accept:"application/vnd.github+json", "Content-Type":"application/json"},
-    body:JSON.stringify({message:`delete attachment: ${path}`, sha:meta.sha, branch:githubConfig.branch})
-  });
-  const delData = await delRes.json();
-  if(!delRes.ok) throw new Error(delData.message || "GitHub 刪除檔案失敗");
+  return {legacy:false};
 }
 async function deleteAttachment(postId, fileIndex){
   const post = announcements.find(p=>p.id===postId);
@@ -317,10 +322,10 @@ async function deleteAttachment(postId, fileIndex){
   if(!file) return alert("找不到附件。");
   if(!confirm(`確定刪除附件？\n\n${file.name}\n\n公告文字會保留，附件會永久刪除。`)) return;
   try{
-    await deleteGithubFileIfPossible(file.url);
+    const deletion=await deleteGithubFileIfPossible(file);
     files.splice(Number(fileIndex),1);
     await updateDoc(doc(db,"announcements",postId), {files, updatedAt:serverTimestamp()});
-    alert("附件已刪除，公告已保留。");
+    alert(deletion.legacy?"附件已從公告移除。這是舊版檔案，原 Repository 內的實體檔案未自動刪除。":"附件已刪除，公告已保留。");
   }catch(e){
     console.error(e);
     alert("刪除失敗：\n"+e.message);
@@ -334,7 +339,7 @@ async function deleteAllAttachments(postId){
   if(!confirm(`確定刪除這篇公告的全部附件？\n\n${post.title}\n\n共 ${files.length} 個附件。\n公告文字會保留。`)) return;
   try{
     for(const file of files){
-      await deleteGithubFileIfPossible(file.url);
+      await deleteGithubFileIfPossible(file);
     }
     await updateDoc(doc(db,"announcements",postId), {files:[], updatedAt:serverTimestamp()});
     alert("這篇公告的附件已全部刪除，公告已保留。");

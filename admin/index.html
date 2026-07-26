@@ -28,7 +28,7 @@
       <button class="nav-item" data-view="capacity">💾 容量管理</button>
       <button class="nav-item" data-view="settings">⚙ 系統設定</button>
     </nav>
-    <div class="version-pill">v5.0</div><div id="sidebarCapacityStatus" class="capacity-mini">v5.0<br>容量讀取中...</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
+    <div class="version-pill">v5.1</div><div id="sidebarCapacityStatus" class="capacity-mini">v5.1<br>容量讀取中...</div><div class="side-note"><strong>不放個資原則</strong><p>此平台只放公開資訊。</p></div>
   </aside>
 
   <main class="dashboard">
@@ -136,7 +136,7 @@
           <div>
             <div class="eyebrow">GitHub Repository</div>
             <h2 id="repoSizeText">容量讀取中...</h2>
-            <p id="repoStatusText">請確認 GitHub Token 已設定。</p>
+            <p id="repoStatusText">由共用上傳服務讀取素材 Repository 容量。</p>
           </div>
           <div class="capacity-ring">
             <strong id="repoPercentText">--%</strong>
@@ -169,12 +169,7 @@
       <section class="panel">
         <h2>⚙ 系統設定</h2>
 
-        <h3>GitHub Token</h3>
-        <p>GitHub Token 只存在此瀏覽器，用於拖曳上傳檔案到 Repository。</p>
-        <label>GitHub Token</label>
-        <input id="githubToken" class="field" type="password" placeholder="貼上 fine-grained token">
-        <button id="saveTokenBtn" class="primary-btn">儲存 Token</button>
-        <button id="clearTokenBtn" class="ghost-btn">清除 Token</button>
+        <div class="portal-managed-note"><strong>☁ 圖片與附件共用上傳服務</strong><p>已連接 Cloudflare Worker。老師與小幫手換電腦使用時，不需要設定 GitHub Token。</p></div>
 
         <hr class="soft-line">
 
