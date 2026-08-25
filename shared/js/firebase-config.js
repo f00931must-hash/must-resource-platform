@@ -15,3 +15,7 @@ export const uploadServiceConfig = {
   baseUrl: "https://must-free-upload-service.f00931-must.workers.dev",
   system: "announcement"
 };
+
+export const aiServiceConfig = {
+  baseUrl: "https://must-resource-ai.f00931-must.workers.dev"
+};
