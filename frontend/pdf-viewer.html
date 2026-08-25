@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PDF 附件預覽｜資源教室公告平台</title>
+<link rel="stylesheet" href="../shared/css/theme.css">
+<link rel="stylesheet" href="./css/pdf-viewer.css">
+</head>
+<body>
+<header class="viewer-header">
+  <button type="button" id="backBtn" class="viewer-button secondary">← 返回公告</button>
+  <div class="viewer-title"><strong id="fileName">PDF 附件</strong><span id="pageStatus">載入中…</span></div>
+  <button type="button" id="copyUrlBtn" class="viewer-button">複製檔案網址</button>
+</header>
+<main id="viewer" class="pdf-viewer" aria-live="polite">
+  <section id="loadingBox" class="viewer-message"><div class="spinner"></div><strong>PDF 載入中</strong><span>請稍候，不需要下載檔案。</span></section>
+</main>
+<script type="module" src="./js/pdf-viewer.js"></script>
+</body>
+</html>
