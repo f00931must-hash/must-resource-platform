@@ -49,6 +49,18 @@ function isLineBrowser() {
   return /\bLine\//i.test(navigator.userAgent) || /\bLine\b/i.test(navigator.userAgent);
 }
 
+function isPdfFile(file) {
+  const value = `${file?.name || ""} ${file?.url || ""}`.toLowerCase();
+  return /\.pdf(?:$|[?#\s])/.test(value);
+}
+
+function pdfPreviewUrl(file) {
+  const viewer = new URL("./pdf-viewer.html", window.location.href);
+  viewer.searchParams.set("file", absoluteUrl(file.url));
+  viewer.searchParams.set("name", file.name || "附件.pdf");
+  return viewer.toString();
+}
+
 async function copyText(text, successMessage = "已複製網址") {
   try {
     await navigator.clipboard.writeText(text);
@@ -167,7 +179,7 @@ function openModal(id, { updateUrl = true } = {}) {
   const inLine = isLineBrowser();
   const files = (a.files || [])
     .map((f) => inLine
-      ? `<div class="file line-file"><span>📎 ${escapeHtml(f.name)}</span><div class="file-actions"><button type="button" class="file-open-btn" data-open-file="${escapeHtml(f.url)}">使用瀏覽器開啟</button><button type="button" class="file-copy-btn" data-copy-file="${escapeHtml(f.url)}">複製網址</button></div></div>`
+      ? `<div class="file line-file"><span>📎 ${escapeHtml(f.name)}</span><div class="file-actions">${isPdfFile(f) ? `<button type="button" class="file-open-btn" data-preview-pdf="${escapeHtml(pdfPreviewUrl(f))}">直接預覽 PDF</button>` : `<button type="button" class="file-open-btn" data-open-file="${escapeHtml(f.url)}">使用瀏覽器開啟</button>`}<button type="button" class="file-copy-btn" data-copy-file="${escapeHtml(f.url)}">複製網址</button></div></div>`
       : `<a class="file" href="${normalizeUrl(f.url)}" target="_blank" rel="noopener">📎 ${escapeHtml(f.name)}</a>`)
     .join("");
 
@@ -182,7 +194,7 @@ function openModal(id, { updateUrl = true } = {}) {
     </div>
     ${imgs}
     <div class="content">${escapeHtml(a.content || "")}</div>
-    ${files ? `<h3>附件下載</h3>${inLine ? '<div class="line-download-note"><strong>LINE 內建瀏覽器不支援直接下載檔案</strong><span>請使用下方按鈕改由手機瀏覽器開啟，或複製網址後貼到 Chrome／Safari。</span></div>' : ""}${files}` : ""}
+    ${files ? `<h3>附件下載</h3>${inLine ? '<div class="line-download-note"><strong>PDF 可直接在此預覽</strong><span>若要將檔案儲存到手機，再複製網址至 Chrome／Safari 下載。</span></div>' : ""}${files}` : ""}
   `;
 
   document.getElementById("modal").style.display = "block";
@@ -190,6 +202,9 @@ function openModal(id, { updateUrl = true } = {}) {
   document.getElementById("copyPostLinkBtn").onclick = () => copyPostLink(id);
   document.querySelectorAll("[data-open-file]").forEach((button) => {
     button.onclick = () => openFileInBrowser(button.dataset.openFile);
+  });
+  document.querySelectorAll("[data-preview-pdf]").forEach((button) => {
+    button.onclick = () => { window.location.href = button.dataset.previewPdf; };
   });
   document.querySelectorAll("[data-copy-file]").forEach((button) => {
     button.onclick = () => copyText(absoluteUrl(button.dataset.copyFile), "附件網址已複製，請貼到 Chrome／Safari 開啟下載。");
