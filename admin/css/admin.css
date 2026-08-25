@@ -9,6 +9,7 @@ body{background:#f7f7fb}.login-view{min-height:100vh;display:grid;place-items:ce
 
 .ai-box{border:1px solid var(--pink-soft);background:#fffafd;border-radius:18px;padding:14px;margin-bottom:14px}
 .ai-title{font-weight:900;margin-bottom:10px}
+.ai-note{margin:-2px 0 12px}.ai-custom-label{font-size:13px;margin-top:12px}
 .small-note{font-size:13px;color:#777;margin:8px 0 0}
 .soft-line{border:0;border-top:1px solid var(--line);margin:22px 0}
 .ai-result{min-height:300px;white-space:pre-line;line-height:1.7}
