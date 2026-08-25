@@ -66,7 +66,7 @@
             </div>
             <label for="aiCustomInstruction" class="ai-custom-label">補充要求（可不填）</label>
             <input id="aiCustomInstruction" class="field" placeholder="例如：請特別提醒學生攜帶學生證">
-            <p class="small-note">未設定 OpenAI API Key 時，會改成複製完整提示詞到 ChatGPT。</p>
+            <p class="small-note">AI 由資源教室共用安全服務處理，不需要在此電腦設定 API Key。</p>
           </div>
 
           <label>公告模板</label>
@@ -177,14 +177,7 @@
 
         <hr class="soft-line">
 
-        <h3>OpenAI API Key（AI 助手，可不填）</h3>
-        <p>若不填，AI 按鈕會改成複製提示詞到 ChatGPT。若填入，會直接呼叫 OpenAI API，可能產生 API 費用。</p>
-        <label>OpenAI API Key</label>
-        <input id="openaiKey" class="field" type="password" placeholder="sk-...">
-        <label>模型</label>
-        <input id="openaiModel" class="field" placeholder="gpt-5.5">
-        <button id="saveOpenAiBtn" class="primary-btn">儲存 AI 設定</button>
-        <button id="clearOpenAiBtn" class="ghost-btn">清除 AI 設定</button>
+        <div class="portal-managed-note"><strong>🤖 AI 公告助手已連接共用 Worker</strong><p>所有老師與小幫手可直接使用，不需要在瀏覽器儲存 OpenAI API Key。</p></div>
 
         <hr class="soft-line">
         <div class="portal-managed-note"><strong>👥 老師權限已由資源教室行政平台統一管理</strong><p>需要新增、停用或調整公告後台權限時，請回 Portal 的「管理中心」操作。</p></div>
