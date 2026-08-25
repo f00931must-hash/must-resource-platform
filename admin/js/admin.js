@@ -16,12 +16,20 @@ const templates = {
   general: { category:"公告", content:"📢【公告】\n\n說明：\n辦理方式：\n注意事項：\n聯絡窗口：" }
 };
 const aiPrompts = {
-  formal:"請將以下公告內容改寫成正式、清楚、適合大學資源教室發布的公告。保留重要日期、地點、資格、附件資訊。請使用繁體中文。",
-  student:"請將以下公告內容改寫成學生容易理解的白話版，語氣親切清楚，重要事項用條列呈現。請使用繁體中文。",
-  line:"請將以下公告內容改寫成適合 LINE 官方帳號發布的版本，精簡、有 emoji、重點清楚。請使用繁體中文。",
-  short:"請將以下公告內容濃縮成 500 字以內，保留最重要的日期、對象、方式、附件或連結。請使用繁體中文。",
-  emoji:"請將以下公告內容整理得更容易閱讀，加入適量 emoji，但不要太花俏。請使用繁體中文。"
+  smart:"重新整理成可直接發布的完整公告。依內容使用「說明、適用對象、重要時程、辦理方式、應備資料、注意事項、聯絡窗口」等合適小標；沒有資料的段落不要硬加。",
+  formal:"改寫成正式、清楚的大學行政公告。句子精簡，重要資訊條列化，避免官腔與重複語句。",
+  student:"改寫成學生容易看懂的白話版。先說學生要做什麼，再列出對象、時間、步驟與注意事項，語氣親切但不幼稚。",
+  line:"改寫成適合 LINE 官方帳號直接貼出的版本。開頭一句點出重點，內容精簡、分段清楚，加入少量有功能的 emoji，結尾提醒期限或行動。",
+  short:"濃縮成 500 字以內的完整版本。刪除重複敘述，但日期、時間、地點、對象、資格、辦理方式、聯絡資訊、網址與附件均不得省略。",
+  proofread:"只校正錯字、標點、語句不順與格式，不改變原意、不刪除資訊、不新增內容，並保留原本列點。"
 };
+const aiGuardrails = `共同規則：
+1. 使用臺灣繁體中文，輸出可直接貼入公告內容的正文，不要解釋修改過程。
+2. 不得自行推測或捏造日期、時間、地點、資格、費用、承辦人、電話、網址或附件。
+3. 原文中的日期、數字、專有名詞、聯絡資訊、網址與附件提示必須完整保留。
+4. 原文若有多個列點，必須逐點保留，不可合併成一句而遺漏資訊。
+5. 資訊不足時維持原文或標示「請補充」，不要自行補答案。
+6. 適量使用小標與條列，避免過多 emoji、粗體符號或華麗文案。`;
 
 function normalizeEmail(email){ return String(email || "").trim().toLowerCase(); }
 function roleLabel(role){ return role==="superAdmin" ? "👑 超級管理員" : role==="teacher" ? "👨‍🏫 老師" : role==="assistant" ? "📝 助理" : "未授權"; }
@@ -206,12 +214,13 @@ on("adminSearch","input",e=>{ adminKeyword=e.target.value.trim(); renderList(); 
 on("templateSelect","change",e=>{ const t=templates[e.target.value]; if(!t) return; if($("content").value.trim()&&!confirm("套用模板會覆蓋目前內容，確定嗎？")) return; $("category").value=t.category; $("content").value=t.content; });
 
 async function runAi(mode){
-  const data=currentFormData(), instruction=aiPrompts[mode]||aiPrompts.formal;
+  const data=currentFormData(), instruction=aiPrompts[mode]||aiPrompts.smart;
+  const customInstruction=$("aiCustomInstruction")?.value.trim()||"";
   const source=`標題：${data.title}\n分類：${data.category}\n發布日期：${data.date}\n截止日期：${data.deadline||"無"}\n\n內容：\n${data.content}`;
-  const prompt=`${instruction}\n\n${source}`;
+  const prompt=`你是明新科技大學資源教室的公告編輯。\n\n本次任務：${instruction}${customInstruction?`\n補充要求：${customInstruction}`:""}\n\n${aiGuardrails}\n\n原始公告：\n${source}`;
   if(!data.content.trim()&&!data.title.trim()) return alert("請先輸入標題或公告內容，再使用 AI。");
   const apiKey=localStorage.getItem("mrp_openai_key")||"", model=localStorage.getItem("mrp_openai_model")||"gpt-5.5";
-  if(!apiKey){ $("aiResult").value=`請幫我處理以下資源教室公告。\n\n需求：${instruction}\n\n公告內容：\n${source}`; $("aiModal").classList.remove("hidden"); try{await navigator.clipboard.writeText($("aiResult").value);}catch{} alert("尚未設定 OpenAI API Key，已改為複製 ChatGPT 提示詞。"); return; }
+  if(!apiKey){ $("aiResult").value=prompt; $("aiModal").classList.remove("hidden"); try{await navigator.clipboard.writeText(prompt);}catch{} alert("尚未設定 OpenAI API Key，已複製完整提示詞，可直接貼到 ChatGPT。"); return; }
   try{
     $("aiResult").value="AI 產生中，請稍候..."; $("aiModal").classList.remove("hidden");
     const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model,input:prompt})});
