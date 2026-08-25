@@ -55,14 +55,18 @@
 
           <div class="ai-box">
             <div class="ai-title">🤖 AI 公告助手</div>
+            <p class="small-note ai-note">先輸入原始內容，再選擇需要的版本。AI 會保留日期、對象、附件與原有列點，不會自行補資料。</p>
             <div class="tool-row">
+              <button type="button" class="primary-btn ai-action" data-ai="smart">✨ 智慧整理</button>
               <button type="button" class="ghost-btn ai-action" data-ai="formal">正式優化</button>
               <button type="button" class="ghost-btn ai-action" data-ai="student">學生白話版</button>
-              <button type="button" class="ghost-btn ai-action" data-ai="line">LINE版</button>
+              <button type="button" class="ghost-btn ai-action" data-ai="line">LINE 貼文</button>
               <button type="button" class="ghost-btn ai-action" data-ai="short">500字內</button>
-              <button type="button" class="ghost-btn ai-action" data-ai="emoji">加 Emoji</button>
+              <button type="button" class="ghost-btn ai-action" data-ai="proofread">只校對不改寫</button>
             </div>
-            <p class="small-note">未設定 OpenAI API Key 時，會改成複製 ChatGPT 提示詞。</p>
+            <label for="aiCustomInstruction" class="ai-custom-label">補充要求（可不填）</label>
+            <input id="aiCustomInstruction" class="field" placeholder="例如：請特別提醒學生攜帶學生證">
+            <p class="small-note">未設定 OpenAI API Key 時，會改成複製完整提示詞到 ChatGPT。</p>
           </div>
 
           <label>公告模板</label>
