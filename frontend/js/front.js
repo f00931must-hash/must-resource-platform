@@ -41,6 +41,40 @@ function normalizeUrl(url) {
   return "../" + url.replace(/^\//, "");
 }
 
+function absoluteUrl(url) {
+  return new URL(normalizeUrl(url), window.location.href).toString();
+}
+
+function isLineBrowser() {
+  return /\bLine\//i.test(navigator.userAgent) || /\bLine\b/i.test(navigator.userAgent);
+}
+
+async function copyText(text, successMessage = "已複製網址") {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const input = document.createElement("textarea");
+    input.value = text;
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand("copy");
+    input.remove();
+  }
+  alert(successMessage);
+}
+
+function openFileInBrowser(url) {
+  const target = absoluteUrl(url);
+  if (/Android/i.test(navigator.userAgent) && target.startsWith("https://")) {
+    const withoutScheme = target.replace(/^https:\/\//, "");
+    window.location.href = `intent://${withoutScheme}#Intent;scheme=https;package=com.android.chrome;end`;
+    return;
+  }
+  copyText(target, "附件網址已複製。請點 LINE 右上角選單，選擇「使用預設瀏覽器開啟」，或貼到 Safari／Chrome 開啟。");
+}
+
 function render() {
   const keyword = document.getElementById("searchInput").value.trim();
   const sort = document.getElementById("sortSelect").value;
@@ -130,8 +164,11 @@ function openModal(id, { updateUrl = true } = {}) {
     .map((img) => `<img class="modal-img" src="${normalizeUrl(img.url)}" alt="">`)
     .join("");
 
+  const inLine = isLineBrowser();
   const files = (a.files || [])
-    .map((f) => `<a class="file" href="${normalizeUrl(f.url)}" target="_blank" rel="noopener">📎 ${escapeHtml(f.name)}</a>`)
+    .map((f) => inLine
+      ? `<div class="file line-file"><span>📎 ${escapeHtml(f.name)}</span><div class="file-actions"><button type="button" class="file-open-btn" data-open-file="${escapeHtml(f.url)}">使用瀏覽器開啟</button><button type="button" class="file-copy-btn" data-copy-file="${escapeHtml(f.url)}">複製網址</button></div></div>`
+      : `<a class="file" href="${normalizeUrl(f.url)}" target="_blank" rel="noopener">📎 ${escapeHtml(f.name)}</a>`)
     .join("");
 
   document.getElementById("modalContent").innerHTML = `
@@ -145,12 +182,18 @@ function openModal(id, { updateUrl = true } = {}) {
     </div>
     ${imgs}
     <div class="content">${escapeHtml(a.content || "")}</div>
-    ${files ? `<h3>附件下載</h3>${files}` : ""}
+    ${files ? `<h3>附件下載</h3>${inLine ? '<div class="line-download-note"><strong>LINE 內建瀏覽器不支援直接下載檔案</strong><span>請使用下方按鈕改由手機瀏覽器開啟，或複製網址後貼到 Chrome／Safari。</span></div>' : ""}${files}` : ""}
   `;
 
   document.getElementById("modal").style.display = "block";
   document.body.classList.add("modal-open");
   document.getElementById("copyPostLinkBtn").onclick = () => copyPostLink(id);
+  document.querySelectorAll("[data-open-file]").forEach((button) => {
+    button.onclick = () => openFileInBrowser(button.dataset.openFile);
+  });
+  document.querySelectorAll("[data-copy-file]").forEach((button) => {
+    button.onclick = () => copyText(absoluteUrl(button.dataset.copyFile), "附件網址已複製，請貼到 Chrome／Safari 開啟下載。");
+  });
   if (updateUrl) history.pushState({ post: id }, "", postUrl(id));
 }
 
