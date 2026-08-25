@@ -140,7 +140,7 @@ function openModal(id, { updateUrl = true } = {}) {
     <h2>${escapeHtml(a.title)}</h2>
     <p>📅 ${escapeHtml(a.date)} ${a.deadline ? `　⏰ 截止：${escapeHtml(a.deadline)}` : ""}</p>
     <div class="share-box">
-      <div><strong>分享這篇公告</strong><span>複製連結貼給學生，開啟後會直接看到本篇公告。</span></div>
+      <div><strong>分享這篇公告</strong></div>
       <button type="button" id="copyPostLinkBtn" class="share-btn">🔗 複製公告連結</button>
     </div>
     ${imgs}
